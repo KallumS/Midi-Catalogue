@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ReaPack index for Midi Catalogue.
+
+  Add this repository in REAPER with Extensions > ReaPack > Import repositories,
+  pasting the raw URL of this file on the default branch:
+
+    https://raw.githubusercontent.com/KallumS/Midi-Catalogue/main/index.xml
+
+  That URL only resolves once this file is on the default branch.
+
+  Each <source> is pinned to a commit rather than a branch, so an installed
+  version is the exact set of files that was tested and cannot change
+  underneath anyone. Publishing a new version means adding a <version> block
+  with a fresh commit hash - never editing an existing one.
+
+  The six files are one package and install into one folder, because the
+  main script loads the other five from beside itself.
+
+  ReaPack keys an installed package by its NAME, so renaming the script is
+  not an upgrade. Rename sparingly.
+-->
+<index version="1" name="Midi Catalogue">
+  <category name="MIDI Editor">
+
+    <reapack name="Midi Catalogue.lua" type="script" desc="Midi Catalogue">
+      <version name="1.0" author="kallums" time="2026-09-30T21:00:00Z">
+        <changelog><![CDATA[First release. A catalogue of musical ideas generated for your scale, your chords and the instrument you are writing for. Rhythm (ostinato, pulse, syncopation, gallop, tresillo, hemiola, polyrhythm, arpeggio, repeated note, Alberti, broken chord), melody (ascending, descending, arch, wave, sequence, call and response, repetition, development) and harmony (triadic, quartal, cluster, pedal, arpeggiated, contrary motion), for 25 orchestral instruments and four sections. Every entry is calculated, never random, and checked for the instrument's range, speed at your tempo, leaps and breathing, and for the harmony. Transform, repeat and accent it, then insert it at the edit cursor (a section gets a track per instrument), export a .mid, or audition it. Needs ReaImGui.]]></changelog>
+        <source main="main" file="Midi Catalogue.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/481a0700386d64fb536f8bd13212c010661a6e9d/reascripts/Midi%20Catalogue.lua</source>
+        <source file="mc_theory.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/481a0700386d64fb536f8bd13212c010661a6e9d/reascripts/mc_theory.lua</source>
+        <source file="mc_orchestra.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/481a0700386d64fb536f8bd13212c010661a6e9d/reascripts/mc_orchestra.lua</source>
+        <source file="mc_catalogue.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/481a0700386d64fb536f8bd13212c010661a6e9d/reascripts/mc_catalogue.lua</source>
+        <source file="mc_midi.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/481a0700386d64fb536f8bd13212c010661a6e9d/reascripts/mc_midi.lua</source>
+        <source file="mc_place.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/481a0700386d64fb536f8bd13212c010661a6e9d/reascripts/mc_place.lua</source>
+      </version>
+    </reapack>
+
+  </category>
+</index>
