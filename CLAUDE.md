@@ -148,7 +148,20 @@ The notes in the roll share the accent.
 
 ## REAPER, from a script
 
+Every `reaper.` call here was checked on 2026-10-01 against the REAPER API
+functions page (REAPER 7.79) the user uploaded: all signatures match.
+`ImGui_GetBuiltinPath` is ReaImGui's, so it is not on that page. Re-check any
+new call there before using it, and write its mock from the same page.
+
 - `TimeMap_GetTimeSigAtTime` returns `num, denom, tempo` - no retval first.
+- `GetMediaTrackInfo_Value(tr, "IP_TRACKNUMBER")` is 1-based, 0 when not
+  found, -1 for the master; `InsertTrackAtIndex` takes a 0-based index and
+  clamps to the track count. So inserting at the selected track's number puts
+  the new track straight under it, and `idx <= 0` falls back to the end.
+- `StuffMIDIMessage` mode 0 is the virtual keyboard, which is what Audition
+  plays through.
+- `set_action_options(1)`: running the action again ends the script - the
+  toggle behaviour of the sister repos.
 - `MIDI_InsertNote`'s last argument is noSort: true for each, one `MIDI_Sort`.
 - A section's tracks go in with `InsertTrackAtIndex` after the selected
   track's `IP_TRACKNUMBER`, inside `PreventUIRefresh`, as one undo block.
