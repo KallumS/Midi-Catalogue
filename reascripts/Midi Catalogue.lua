@@ -14,7 +14,7 @@
  *                 Needs ReaImGui, from the ReaTeam Extensions repository.
  * Author:         Kallum Shah
  * Links:          https://github.com/KallumS/Midi-Catalogue
- * Version:        1.0
+ * Version:        1.1
  * Provides:
  *   mc_theory.lua
  *   mc_orchestra.lua
