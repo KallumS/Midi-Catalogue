@@ -195,7 +195,7 @@ instrument) or a leap it would not take.
 
 For anyone changing the code: `tools/test.sh` runs every test. The tests run
 the real engine and the real window against stand-ins for REAPER and ReaImGui,
-and check nearly three million things about what comes out - that every note is
+and check over three million things about what comes out - that every note is
 in range, that no melody lands off the chord on a downbeat, that no voicing has
 parallel fifths, that every button in the window can be clicked. See
 [CLAUDE.md](CLAUDE.md) for how it fits together.
