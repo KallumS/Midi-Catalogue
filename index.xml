@@ -33,6 +33,15 @@
         <source file="mc_midi.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/481a0700386d64fb536f8bd13212c010661a6e9d/reascripts/mc_midi.lua</source>
         <source file="mc_place.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/481a0700386d64fb536f8bd13212c010661a6e9d/reascripts/mc_place.lua</source>
       </version>
+      <version name="1.1" author="kallums" time="2026-10-01T12:00:00Z">
+        <changelog><![CDATA[Chain your own chords. The chords are now a row you build, up to eight: any of Starting Blocks' 78 named chords (7ths, extended, altered, sus and add, quartal, Tristan, So What and more) or the 9 the scale builds, on any degree. Click a chord to change it, + to add one, - to remove one, or start again from a common progression. Under a chord with notes your scale lacks - a borrowed C major in C minor, a D7 in C major - everything in the catalogue plays the chord's own notes. A smaller window: instruments show a family at a time with the register beside them, and the chord editor opens only while you are changing a chord.]]></changelog>
+        <source main="main" file="Midi Catalogue.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/0c62f386a5d2b7521b54bebaeb58f621790f2a41/reascripts/Midi%20Catalogue.lua</source>
+        <source file="mc_theory.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/0c62f386a5d2b7521b54bebaeb58f621790f2a41/reascripts/mc_theory.lua</source>
+        <source file="mc_orchestra.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/0c62f386a5d2b7521b54bebaeb58f621790f2a41/reascripts/mc_orchestra.lua</source>
+        <source file="mc_catalogue.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/0c62f386a5d2b7521b54bebaeb58f621790f2a41/reascripts/mc_catalogue.lua</source>
+        <source file="mc_midi.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/0c62f386a5d2b7521b54bebaeb58f621790f2a41/reascripts/mc_midi.lua</source>
+        <source file="mc_place.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/0c62f386a5d2b7521b54bebaeb58f621790f2a41/reascripts/mc_place.lua</source>
+      </version>
     </reapack>
 
   </category>

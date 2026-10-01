@@ -47,7 +47,6 @@ M.REPEATS    = { 1, 2, 4 }
 M.DENSITIES  = { "Any", "Sparse", "Medium", "Busy" }
 M.VELOCITIES = { "Flat 100", "Accents" }
 M.LENGTHS    = { 1, 2, 4, 8 }
-M.COLOURS    = { { id = "triad", name = "Triads" }, { id = "seventh", name = "Sevenths" } }
 
 -- Onsets per beat that separate the density bands. A held chord is sparse,
 -- a quarter-note pulse medium, anything moving in sixteenths busy.
@@ -66,16 +65,24 @@ end
 ------------------------------------------------------------------------------
 
 -- Everything the generators need to know, from the choices the window holds.
--- `o` is plain: root and scale indices, a progression id, a chord colour,
--- bars, the project's bar length and tempo, an instrument id, a register and
--- optionally an ensemble id.
+-- `o` is plain: root and scale indices, the chain of chords (or, for short, a
+-- progression id and "triad" or "seventh"), bars, the project's bar length
+-- and tempo, an instrument id, a register and optionally an ensemble id.
+--
+-- Each chord gets the scale as it sounds under it (T.chordKey), and every
+-- generator turns scale steps into notes through the slot's key, so a figure
+-- written as 1-3-5 plays a borrowed chord's own third.
 function M.context(o)
   local key  = T.key(o.root or 1, o.scale or 1)
-  local prog = T.progressionById(o.prog or "I")
-  if not T.progressionFits(key, prog) then prog = T.PROGRESSIONS[1] end
+  local chain = o.chain
+  if type(chain) == "string" then chain = T.parseChain(chain, key) end
+  if not chain or #chain == 0 then
+    local prog = T.progressionById(o.prog or "I")
+    if not T.progressionFits(key, prog) then prog = T.PROGRESSIONS[1] end
+    chain = T.presetChain(prog, o.colour == "seventh")
+  end
   local ctx = {
-    key = key, prog = prog, n = T.scaleLen(key),
-    colour = (o.colour == "seventh") and "seventh" or "triad",
+    key = key, chain = chain, n = T.scaleLen(key),
     bars = o.bars or 4, barBeats = o.barBeats or 4, bpm = o.bpm or 120,
     inst = O.byId(o.inst or "pno") or O.byId("pno"),
     register = o.register or "Middle",
@@ -83,11 +90,13 @@ function M.context(o)
     cache = {},
   }
   ctx.L = ctx.bars * ctx.barBeats
-  local k = #prog.degrees
+  local k = #chain
   ctx.slots = {}
-  for i, d in ipairs(prog.degrees) do
-    ctx.slots[i] = { i = i, start = (i - 1) * ctx.L / k, len = ctx.L / k, degree = d,
-                     chord = T.chord(key, d, ctx.colour) }
+  for i, link in ipairs(chain) do
+    local chord = T.chord(key, link.degree, T.chainSpec(link))
+    chord.key = T.chordKey(key, chord)
+    ctx.slots[i] = { i = i, start = (i - 1) * ctx.L / k, len = ctx.L / k, degree = link.degree,
+                     chord = chord, key = chord.key }
   end
   ctx.lo, ctx.hi, ctx.centre = O.band(ctx.inst, ctx.register)
   if ctx.inst.pitches == "td" then ctx.drums = M.drums(ctx) end
@@ -105,6 +114,10 @@ function M.slotAt(ctx, t)
   return ctx.slots[i]
 end
 
+-- The scale as it sounds at a time: the key, bent to the chord there.
+local function keyAt(ctx, t) return M.slotAt(ctx, t).key end
+M.keyAt = keyAt
+
 ------------------------------------------------------------------------------
 -- Settings
 --
@@ -117,7 +130,7 @@ end
 function M.newState()
   return {
     root = 1, scale = 1,                 -- C major
-    prog = "I-V-vi-IV", colour = "triad", bars = 4,
+    chain = "0:d:Triad,4:d:Triad,5:d:Triad,3:d:Triad", bars = 4,   -- I-V-vi-IV
     inst = "pno", section = "",          -- a section id, or "" for the instrument
     register = "Middle",
     cat = "Rhythm", type = "Ostinato", entry = "",
@@ -140,10 +153,15 @@ function M.clampState(st)
   st.root  = pin(st.root, 1, #T.ROOTS, 1)
   st.scale = pin(st.scale, 1, #T.SCALES, 1)
   local key = T.key(st.root, st.scale)
-  local fits = false
-  for _, p in ipairs(T.progressionsFor(key)) do if p.id == st.prog then fits = true end end
-  if not fits then st.prog = T.progressionsFor(key)[1].id end
-  st.colour = (st.colour == "seventh") and "seventh" or "triad"
+  -- The chain keeps every link this scale still has; if none survive, it
+  -- starts again from the first progression the scale can play.
+  local chain = T.parseChain(st.chain, key)
+  if #chain == 0 then
+    local fallback = T.progressionById("I-V-vi-IV")
+    if not T.progressionFits(key, fallback) then fallback = T.progressionsFor(key)[1] end
+    chain = T.presetChain(fallback)
+  end
+  st.chain = T.chainString(chain)
   local bars, best = tonumber(st.bars) or 4, nil
   for _, b in ipairs(M.LENGTHS) do
     if not best or math.abs(b - bars) < math.abs(best - bars) then best = b end
@@ -171,7 +189,7 @@ end
 -- The context the settings describe, in a project with this bar and tempo.
 function M.contextFor(st, barBeats, bpm)
   return M.context({
-    root = st.root, scale = st.scale, prog = st.prog, colour = st.colour, bars = st.bars,
+    root = st.root, scale = st.scale, chain = st.chain, bars = st.bars,
     barBeats = barBeats, bpm = bpm, inst = st.inst, register = st.register,
     ensemble = (st.section ~= "" and st.cat == "Harmony") and st.section or nil,
   })
@@ -221,8 +239,9 @@ function M.nearestChordPos(ctx, chord, pos, lean)
   for d = 0, 2 * ctx.n do
     local first, second = pos + d, pos - d
     if (lean or 1) < 0 then first, second = second, first end
-    if T.hasPc(chord, T.pc(ctx.key, first)) then return first end
-    if T.hasPc(chord, T.pc(ctx.key, second)) then return second end
+    local k = chord.key or ctx.key
+    if T.hasPc(chord, T.pc(k, first)) then return first end
+    if T.hasPc(chord, T.pc(k, second)) then return second end
   end
   return pos
 end
@@ -265,7 +284,7 @@ local function realise(ctx, slot, rootPos, tok)
     if not main then return nil end
     return (M.figSteps(tok, ctx.n) % ctx.n == 0) and main or other
   end
-  return T.pitch(ctx.key, rootPos + M.figSteps(tok, ctx.n))
+  return T.pitch(slot.key, rootPos + M.figSteps(tok, ctx.n))
 end
 
 -- Where a figure's root goes so the figure sits in the middle of the band.
@@ -803,7 +822,7 @@ local ARP_DIRS = { "Up", "Down", "Up-down", "Down-up" }
 local function chordPool(ctx, chord, startPos, octaves)
   local pool = {}
   for pos = startPos, startPos + ctx.n * octaves do
-    if T.hasPc(chord, T.pc(ctx.key, pos)) then pool[#pool + 1] = pos end
+    if T.hasPc(chord, T.pc(chord.key or ctx.key, pos)) then pool[#pool + 1] = pos end
   end
   return pool
 end
@@ -845,12 +864,12 @@ TYPES.Arpeggio = {
       local s0
       if prev then s0 = M.nearestChordPos(ctx, slot.chord, T.nearestPos(ctx.key, prev), 1)
       else s0 = M.rootNear(ctx, slot.degree, startPitch) end
-      prev = T.pitch(ctx.key, s0)
+      prev = T.pitch(slot.key, s0)
       local seq = direct(chordPool(ctx, slot.chord, s0, p.octaves), p.dir)
       local count = math.floor(slot.len / step + EPS)
       for i = 0, count - 1 do
         local pos = seq[(i % #seq) + 1]
-        add(notes, slot.start + i * step, step * 0.9, T.pitch(ctx.key, pos), i % #seq == 0)
+        add(notes, slot.start + i * step, step * 0.9, T.pitch(slot.key, pos), i % #seq == 0)
       end
     end
     return notes
@@ -899,17 +918,18 @@ TYPES["Repeated note"] = {
 local function closeTriads(ctx, voiceLed)
   local key = "close" .. tostring(voiceLed)
   if ctx.cache[key] ~= nil then return ctx.cache[key] end
-  local kind = (ctx.colour == "seventh") and "shell" or "triad"
   local chords = {}
   for i, s in ipairs(ctx.slots) do
-    local ch = T.chord(ctx.key, s.degree, kind == "shell" and "seventh" or "triad")
-    if kind == "shell" then
-      -- Root, third and seventh: the three notes of a seventh chord a hand
-      -- keeps when it has only three fingers to spare.
-      ch = { degree = ch.degree, kind = "shell", pcs = { ch.pcs[1], ch.pcs[2], ch.pcs[4] },
-             root = ch.root, essential = { 1, 2, 3 } }
-    end
-    chords[i] = ch
+    local ch = s.chord
+    -- Three notes of each chord: root, third and fifth, or for a chord with a
+    -- seventh, root, third and seventh - the three a hand keeps when it has
+    -- only three fingers to spare.
+    local pick = (#ch.pcs >= 4) and { 1, 2, 4 } or { 1, 2, 3 }
+    local pcs = {}
+    for _, m in ipairs(pick) do if ch.pcs[m] then pcs[#pcs + 1] = ch.pcs[m] end end
+    local ess = {}
+    for e = 1, #pcs do ess[e] = e end
+    chords[i] = { degree = ch.degree, kind = "close", pcs = pcs, root = ch.root, essential = ess }
   end
   local lo = ctx.lo
   local ranges = { { lo, lo + 12 }, { lo + 2, lo + 17 }, { lo + 4, lo + 21 } }
@@ -921,9 +941,12 @@ local function closeTriads(ctx, voiceLed)
     for i, s in ipairs(ctx.slots) do
       local r = T.pitch(ctx.key, M.rootNear(ctx, s.degree, lo + 5))
       local v = { r }
+      local pcs = chords[i].pcs
       for m = 2, 3 do
+        -- A two-note chord (a power chord) takes its root again on top.
+        local want = pcs[((m - 1) % #pcs) + 1]
         local p = v[m - 1] + 1
-        while p % 12 ~= chords[i].pcs[m] do p = p + 1 end
+        while p % 12 ~= want do p = p + 1 end
         v[m] = p
       end
       out[i] = v
@@ -1060,7 +1083,8 @@ local function isStrong(ctx, t, len)
 end
 
 local function chordOf(ctx, nt) return M.slotAt(ctx, nt.start).chord end
-local function isCT(ctx, nt) return T.hasPc(chordOf(ctx, nt), T.pc(ctx.key, nt.pos)) end
+local function isCT(ctx, nt) return T.hasPc(chordOf(ctx, nt), T.pc(keyAt(ctx, nt.start), nt.pos)) end
+local function pitchOf(ctx, nt) return T.pitch(keyAt(ctx, nt.start), nt.pos) end
 
 -- The rules every melody here passes through, whatever made it. Notes carry
 -- positions (`pos`); these put strong notes on the chord, keep weak ones
@@ -1106,7 +1130,7 @@ local function closeLine(ctx, notes, closing)
     local best
     for d = 0, 4 do
       for _, s in ipairs({ last.pos - d, last.pos + d }) do
-        if not best and T.pc(ctx.key, s) == ch.root then best = s end
+        if not best and T.pc(ch.key or ctx.key, s) == ch.root then best = s end
       end
     end
     last.pos = best or M.nearestChordPos(ctx, ch, last.pos, -1)
@@ -1115,9 +1139,11 @@ local function closeLine(ctx, notes, closing)
   end
 end
 
-local function badInterval(ctx, a, b)
+-- An augmented second or a tritone between two notes, given as positions
+-- and the pitches they sound as.
+local function badInterval(ctx, a, b, pa, pb)
   if ctx.n ~= 7 then return false end
-  local semis = math.abs(T.pitch(ctx.key, b) - T.pitch(ctx.key, a))
+  local semis = math.abs(pb - pa)
   return (math.abs(b - a) == 1 and semis == 3) or semis == 6
 end
 
@@ -1127,7 +1153,7 @@ local function repairIntervals(ctx, notes, from, closing)
   for _ = 1, 3 do
     for i = math.max(from or 1, 2), #notes do
       local a, b = notes[i - 1], notes[i]
-      if badInterval(ctx, a.pos, b.pos) then
+      if badInterval(ctx, a.pos, b.pos, pitchOf(ctx, a), pitchOf(ctx, b)) then
         -- The weaker of the two gives way: it takes the other's pitch for an
         -- augmented second, or steps towards it for a tritone.
         local weak = (b.strong and not a.strong) and a or b
@@ -1145,7 +1171,7 @@ local function repairIntervals(ctx, notes, from, closing)
 end
 
 local function toPitches(ctx, notes)
-  for _, nt in ipairs(notes) do nt.pitch = T.pitch(ctx.key, nt.pos) end
+  for _, nt in ipairs(notes) do nt.pitch = pitchOf(ctx, nt) end
   return notes
 end
 
@@ -1155,23 +1181,6 @@ local function finishMelody(ctx, notes, closing, fromIndex)
   closeLine(ctx, notes, closing)
   repairIntervals(ctx, notes, fromIndex, closing)
   return toPitches(ctx, notes)
-end
-
--- What moving from one position to the next costs a line. Steps are free,
--- a skip of a third nearly so; leaps cost more the wider they are, and a note
--- struck again costs something, because a line that keeps repeating itself
--- has stopped being a line.
-local function moveCost(ctx, a, b, bNote)
-  local d = math.abs(b - a)
-  local c
-  if d == 0 then c = 2.5
-  elseif d == 1 then c = 0
-  elseif d == 2 then c = 0.8
-  elseif d == 3 then c = 2
-  elseif d == 4 then c = 3
-  else c = 3 + (d - 4) * 1.5 end
-  if badInterval(ctx, a, b) then c = c + 6 end
-  return c
 end
 
 -- Fills the notes between fixed ones. Each gap is solved on its own, for the
@@ -1199,30 +1208,42 @@ local function fillLine(ctx, notes)
       local before = (i > 1 and notes[i - 1].pos) or A
 
       -- Everything a step asks about a position, worked out once per gap.
+      -- Pitches are per note, because the scale bends with the chord: P[m] is
+      -- the scale under note m, from the first fixed note (0) to the second
+      -- (k + 1).
       local P, CT, beat = {}, {}, {}
-      for pos = lo - 3, hi + 3 do P[pos] = T.pitch(ctx.key, pos) end
+      for m = 0, k + 1 do
+        local key = keyAt(ctx, notes[i + m].start)
+        local row = {}
+        for pos = lo - 3, hi + 3 do row[pos] = T.pitch(key, pos) end
+        P[m] = row
+      end
       for m = 1, k do
         local nt = notes[i + m]
         local ch = chordOf(ctx, nt)
         CT[m] = {}
-        for pos = lo, hi do CT[m][pos] = T.hasPc(ch, P[pos] % 12) end
+        for pos = lo, hi do CT[m][pos] = T.hasPc(ch, P[m][pos] % 12) end
         beat[m] = math.abs(nt.start - math.floor(nt.start + 0.5)) < EPS
       end
 
-      local function move(a, b)
+      -- What moving from position a (note m - 1) to b (note m) costs. Steps
+      -- are free, a skip of a third nearly so; leaps cost more the wider they
+      -- are, and a note struck again costs something, because a line that
+      -- keeps repeating itself has stopped being a line.
+      local function move(a, b, m)
         local d = math.abs(b - a)
         local c
         if d == 0 then c = 2.5 elseif d == 1 then c = 0 elseif d == 2 then c = 0.8
         elseif d == 3 then c = 2 elseif d == 4 then c = 3 else c = 3 + (d - 4) * 1.5 end
         if seven then
-          local semis = math.abs(P[b] - P[a])
+          local semis = math.abs(P[m][b] - P[m - 1][a])
           if (d == 1 and semis == 3) or semis == 6 then c = c + 6 end
         end
         return c
       end
-      -- The cost of arriving at `b` from `a`, with `pp` before that.
+      -- The cost of arriving at `b` (note m) from `a`, with `pp` before that.
       local function step(pp, a, b, bCT, aCT, onBeat, m)
-        local c = move(a, b)
+        local c = move(a, b, m)
         local d, back = sgn(b - a), sgn(a - pp)
         if d ~= 0 and back ~= 0 and d ~= back then c = c + 0.6 end
         if b == pp and a ~= b then c = c + 1.0 end
@@ -1231,7 +1252,7 @@ local function fillLine(ctx, notes)
         if leap and not bCT then c = c + 3 end
         if leap and not aCT then c = c + 3 end
         if not bCT and onBeat then c = c + 0.7 end
-        if m then c = c + 0.25 * math.abs(b - (A + (B - A) * m / (k + 1))) end
+        if m <= k then c = c + 0.25 * math.abs(b - (A + (B - A) * m / (k + 1))) end
         return c
       end
 
@@ -1271,7 +1292,7 @@ local function fillLine(ctx, notes)
         for b = lo, hi do
           local c0 = cost[k][a][b]
           if c0 then
-            local c = c0 + step(a, b, B, true, CT[k][b], false, nil)
+            local c = c0 + step(a, b, B, true, CT[k][b], false, k + 1)
             if not best or c < best - EPS then best, bestA, bestB = c, a, b end
           end
         end
@@ -1340,7 +1361,7 @@ local function shapeLine(ctx, notes, from, startPos, f, span, closing)
       local slope = f(math.min(1, u + 0.05)) - f(math.max(0, u - 0.05))
       local ch, best, bestC = chordOf(ctx, nt), nil, nil
       for pos = math.floor(target) - 3, math.ceil(target) + 3 do
-        if T.hasPc(ch, T.pc(ctx.key, pos)) then
+        if T.hasPc(ch, T.pc(ch.key or ctx.key, pos)) then
           local cc = math.abs(pos - target)
           if prevSkel then
             if (slope > 0.01 and pos < prevSkel) or (slope < -0.01 and pos > prevSkel) then cc = cc + 4 end
@@ -1552,11 +1573,11 @@ TYPES["Call/response"] = {
     -- An open ending: the call stops on the fifth or the third, not the root.
     local lastCall = call[#call]
     local ch = M.slotAt(ctx, lastCall.start).chord
-    if T.pc(ctx.key, lastCall.pos) == ch.root then
+    if T.pc(ch.key or ctx.key, lastCall.pos) == ch.root then
       local up = M.nearestChordPos(ctx, ch, lastCall.pos + 1, 1)
       local down = M.nearestChordPos(ctx, ch, lastCall.pos - 1, -1)
       lastCall.pos = (math.abs(up - lastCall.pos) <= math.abs(down - lastCall.pos)) and up or down
-      lastCall.pitch = T.pitch(ctx.key, lastCall.pos)
+      lastCall.pitch = pitchOf(ctx, lastCall)
     end
 
     local resp = {}
@@ -1616,10 +1637,10 @@ TYPES.Repetition = {
       -- offered, rather than bent into something else.
       for i, n in ipairs(notes) do
         if (onDownbeat(ctx, n.start) or i == #notes)
-           and not T.hasPc(M.slotAt(ctx, n.start).chord, T.pc(ctx.key, n.pos)) then
+           and not T.hasPc(M.slotAt(ctx, n.start).chord, T.pc(keyAt(ctx, n.start), n.pos)) then
           return nil, "clashes with the chords"
         end
-        n.pitch = T.pitch(ctx.key, n.pos)
+        n.pitch = pitchOf(ctx, n)
         n.strong = onDownbeat(ctx, n.start)
       end
       return toNotes(notes)
@@ -1771,9 +1792,20 @@ local function harmonySetup(ctx, p, uniform)
 end
 M._harmonySetup = harmonySetup
 
+-- The chords of a list of slots: the ones chosen, or with `kind` a shape the
+-- type builds for itself (stacked fourths, a cluster) on each chord's degree,
+-- from the scale as it sounds under that chord.
 local function slotChords(ctx, slots, kind)
   local out = {}
-  for i, s in ipairs(slots) do out[i] = T.chord(ctx.key, s.degree, kind) end
+  for i, s in ipairs(slots) do
+    if kind then
+      local ch = T.chord(s.key, s.degree, kind)
+      ch.key = s.key
+      out[i] = ch
+    else
+      out[i] = s.chord
+    end
+  end
   return out
 end
 
@@ -1826,7 +1858,7 @@ TYPES.Triadic = {
     end)
   end,
   build = function(ctx, p, hv)
-    local v = lead(ctx, slotChords(ctx, ctx.slots, ctx.colour), hv.ranges, { bassRoot = true })
+    local v = lead(ctx, slotChords(ctx, ctx.slots), hv.ranges, { bassRoot = true })
     if not v then return nil, "no voicing fits" end
     return comp(ctx, ctx.slots, v, p.comp.id)
   end,
@@ -1918,7 +1950,7 @@ TYPES.Pedal = {
     end
     local opts = { bassRoot = true }
     if p.where.id == "bass" then opts.fixedBass = pedal else opts.fixedTop = pedal end
-    local v = lead(ctx, slotChords(ctx, ctx.slots, ctx.colour), hv.ranges, opts)
+    local v = lead(ctx, slotChords(ctx, ctx.slots), hv.ranges, opts)
     if not v then return nil, "no voicing fits over the pedal" end
     local voices = comp(ctx, ctx.slots, v, "held", idx)
     local line = {}
@@ -1963,7 +1995,7 @@ TYPES.Arpeggiated = {
     end)
   end,
   build = function(ctx, p, hv)
-    local v = lead(ctx, slotChords(ctx, ctx.slots, ctx.colour), hv.ranges, { bassRoot = true })
+    local v = lead(ctx, slotChords(ctx, ctx.slots), hv.ranges, { bassRoot = true })
     if not v then return nil, "no voicing fits" end
     local nv = hv.nv
     local voices = {}
@@ -2012,11 +2044,11 @@ TYPES["Contrary motion"] = {
     for _, s in ipairs(ctx.slots) do
       for j = 0, per - 1 do
         slots[#slots + 1] = { i = #slots + 1, start = s.start + j * s.len / per, len = s.len / per,
-                              degree = s.degree }
+                              degree = s.degree, chord = s.chord, key = s.key }
       end
     end
     local opts = { bassRoot = false, contrary = (p.dir.id == "up") and 1 or -1 }
-    local v = lead(ctx, slotChords(ctx, slots, ctx.colour), hv.ranges, opts)
+    local v = lead(ctx, slotChords(ctx, slots), hv.ranges, opts)
     if not v then return nil, "no voicing fits" end
     return comp(ctx, slots, v, p.comp.id)
   end,
@@ -2331,24 +2363,26 @@ function M.transform(ctx, parts, kind)
       local all = {}
       for _, part in ipairs(parts) do for _, n in ipairs(part.notes) do all[#all + 1] = n end end
       if #parts == 1 and parts[1].inst.poly == 1 and #all > 0 then
-        axis = T.nearestPos(ctx.key, all[1].pitch)
+        axis = T.nearestPos(keyAt(ctx, all[1].start), all[1].pitch)
       else
         local sum = 0
-        for _, n in ipairs(all) do sum = sum + T.nearestPos(ctx.key, n.pitch) end
+        for _, n in ipairs(all) do sum = sum + T.nearestPos(keyAt(ctx, n.start), n.pitch) end
         axis = math.floor(sum / math.max(1, #all) + 0.5)
       end
     end
     for _, part in ipairs(parts) do
       for _, n in ipairs(part.notes) do
         n.origPitch = n.pitch
-        local pos = T.nearestPos(ctx.key, n.pitch)
+        -- A position is read in the scale under the note where it was, and
+        -- turned back into a pitch in the scale under it where it lands.
+        local pos = T.nearestPos(keyAt(ctx, n.start), n.pitch)
         if invert then pos = 2 * axis - pos end
         if retro then n.start = L - n.start - n.len end
         if n.ct then
           local lean = invert and -1 or 1
           pos = M.nearestChordPos(ctx, M.slotAt(ctx, n.start).chord, pos, lean)
         end
-        n.pitch = T.pitch(ctx.key, pos)
+        n.pitch = T.pitch(keyAt(ctx, n.start), pos)
         if ctx.drums then
           -- On the timpani an inversion swaps the two drums, and whatever
           -- lands under a chord that lacks it takes that chord's own drum.
@@ -2417,7 +2451,7 @@ end
 function M.blockName(ctx, typeName, entry, transform, times)
   local who = ctx.ensemble and ctx.ensemble.name or ctx.inst.name
   local name = ("%s %s %s %s %s %s"):format(T.ROOTS[ctx.key.root].name, T.SCALES[ctx.key.scale].name,
-    T.progressionName(ctx.key, ctx.prog), who, typeName, entry.label)
+    T.chainName(ctx.key, ctx.chain, true), who, typeName, entry.label)
   if transform and transform ~= "Original" then name = name .. " " .. transform:lower() end
   if times and times > 1 then name = name .. " x" .. times end
   return (name:gsub("%s+", " "))

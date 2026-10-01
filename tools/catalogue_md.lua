@@ -89,6 +89,25 @@ for _, cat in ipairs(C.CATEGORIES) do
   end
 end
 
+w("## The chords")
+w()
+w("Any of these can sit on any degree of the scale, chained up to " .. T.MAX_CHAIN .. " at a time. The")
+w("diatonic ones are built from the scale itself; the rest are Starting Blocks' table,")
+w("on the degree's root. Under a chord with notes the scale lacks, the scale bends to")
+w("meet it for as long as it lasts.")
+w()
+w("| family | chord | name | semitones |")
+w("| --- | --- | --- | --- |")
+for _, d in ipairs(T.DIATONIC) do
+  local off = {}
+  for i, o in ipairs(d.offsets) do off[i] = o end
+  w(("| Diatonic | %s | built from the scale | steps %s |"):format(d.name, table.concat(off, " ")))
+end
+for _, c in ipairs(T.CHORDS) do
+  w(("| %s | %s | %s | %s |"):format(T.FAMILIES[c.fam], c.sym, c.name, table.concat(c.iv, " ")))
+end
+w()
+
 w("## The instruments")
 w()
 w("Sounding pitches. `sweet` is where the catalogue writes; `fast` is the shortest")
