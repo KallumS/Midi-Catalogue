@@ -4,8 +4,8 @@ A catalogue of musical ideas for REAPER - rhythms, melodies and harmony -
 written for your scale, your chords and the instrument you are writing for,
 and dropped into your project as MIDI.
 
-You pick a scale. You pick the chords underneath. You pick an instrument of
-the orchestra - Violin I, oboe, horn, timpani, harp - or a whole section. Then
+You pick a scale. You chain together the chords underneath - any chord, on
+any degree of the scale. You pick an instrument of the orchestra - Violin I, oboe, horn, timpani, harp - or a whole section. Then
 you browse a catalogue of ideas that suit that instrument in that key over
 those chords, and put the one you like into the project.
 
@@ -57,12 +57,15 @@ Repetition, Development.
 **Harmony** - Triadic, Quartal, Cluster, Pedal, Arpeggiated, Contrary motion.
 
 The whole list, entry by entry, is in [docs/CATALOGUE.md](docs/CATALOGUE.md),
-along with every instrument's range and limits.
+along with all 87 chords and every instrument's range and limits.
 
 **The instruments**: Violin I, Violin II, Viola, Cello, Double Bass, Piccolo,
 Flute, Oboe, English Horn, Clarinet, Bass Clarinet, Bassoon, Contrabassoon,
 Horn, Trumpet, Trombone, Bass Trombone, Tuba, Timpani, Glockenspiel,
 Xylophone, Marimba, Harp, Celesta and Piano.
+
+**The chords**: Starting Blocks' 78 named chords and the 9 the scale builds
+for itself, on any degree, chained up to eight at a time.
 
 **The sections**: Strings, Woodwinds, Brass and Four Horns. Pick one and the
 harmony is spread across it one voice to a part - Violin I on top, the double
@@ -118,13 +121,28 @@ The window is four numbered steps, top to bottom.
 
 1. **Scale.** The key and the scale. Its notes are spelled out underneath, the
    way ScaleView spells them.
-2. **Chords underneath.** A progression, named in the numerals your scale
-   actually builds (so I-IV-V-I in a minor scale reads i-iv-v-i), triads or
-   sevenths, and how many bars the idea lasts. The chords share the bars
-   evenly: four chords over four bars is one a bar.
-3. **Instrument.** Any instrument of the orchestra, or a section, and the
-   register - low, middle or high within where that instrument sounds best.
-   Hover over an instrument to see its range.
+2. **Chords.** The chords underneath, as a row of buttons named the way
+   you would write them: I, V7, vi, IVmaj7. Hover over one to see its notes.
+   **Click a chord to change it**: underneath appear its root (a degree of
+   the scale), the chord families - Diatonic (built from the scale: triad,
+   7th, 9th, 11th, 13th, 6th, sus2, sus4, 5th), Triads, 6ths & 7ths,
+   Extended, Altered, Sus & Add, Quartal and Named (Tristan, So What,
+   Petrushka...) - and every chord in the family you pick. **+** adds a chord
+   (up to eight), **-** removes one, and "Start again from" replaces the whole
+   chain with a common progression. Click the chord again, or Done, to close
+   it. Next to the chain, how many bars the idea lasts; the chords share them
+   evenly.
+
+   A chord can hold notes your scale does not - a C major chord in C minor,
+   a D7 in C major. Under that chord, everything in the catalogue borrows the
+   chord's own notes (E natural, F#) for as long as it lasts, the way a
+   player would, instead of clashing with it.
+3. **Instrument.** One row of families - Strings, Woodwind, Brass,
+   Percussion, Keys & Harp, Sections - and under it the instruments of the
+   family you are looking at. Looking at another family does not change your
+   instrument; clicking one does. Next to the families, the register - low,
+   middle or high within where that instrument sounds best. Hover over an
+   instrument to see its range.
 4. **Catalogue.** Rhythm, Melody or Harmony, then the type, then the entries
    themselves. Click one and it appears in the piano roll at the bottom.
    Hover over an entry for a sentence saying exactly what it is. The

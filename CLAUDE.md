@@ -14,7 +14,7 @@ REAPER). When in doubt, do what they do.
 | | |
 | --- | --- |
 | `reascripts/Midi Catalogue.lua` | The window and the wiring. ReaImGui lives only here. |
-| `reascripts/mc_theory.lua` | Keys, scales, chords, progressions, **voice leading**. ScaleView's ROOTS and SCALES, unchanged. |
+| `reascripts/mc_theory.lua` | Keys, scales, **every chord**, chord scales, the chain, progressions, **voice leading**. ScaleView's ROOTS and SCALES and Starting Blocks' chord tables, unchanged. |
 | `reascripts/mc_orchestra.lua` | The instruments and sections: ranges, where each sounds best, speed, leaps, breath, hands. Data. |
 | `reascripts/mc_catalogue.lua` | The 25 types, the checks, transformations, the block. |
 | `reascripts/mc_midi.lua` | The MIDI file writer (Starting Blocks', plus format 1 for sections). |
@@ -59,6 +59,34 @@ in any scale. Pitches appear only at the edges (`T.pitch`, `T.nearestPos`).
 Figures are written the way players say them, `"1-5-8-5"`, and `M.figSteps`
 turns them into steps (8 is the scale's own octave; a trailing comma is the
 octave below).
+
+## Chords: a chain, and the scale under each ([0009](docs/decisions/0009-chords-are-a-chain-of-any-chord.md))
+
+The progression is a **chain** the user builds, up to `T.MAX_CHAIN` (8)
+links. A link is `{ degree, fam = "d" | "c", name }`: a diatonic chord from
+`T.DIATONIC` by name, or any of Starting Blocks' 78 `T.CHORDS` by symbol, on a
+degree's root. Saved as text, `"0:d:Triad,4:c:7"`, by name; `T.parseChain`
+drops links that mean nothing in the current scale. The old progressions
+(`T.PROGRESSIONS`) are only presets now: `T.presetChain`. `C.context` still
+takes `prog` (and `colour = "seventh"`) for short, which the tests use.
+
+`T.chord(key, degree, spec)` takes a kind name (the shapes Quartal and
+Cluster build for themselves), `{ fam = "d", name }` or `{ fam = "c", sym }`.
+Essential members: root, third, seventh, and the top of a five-or-more-note
+chord; a fifth can go.
+
+**Chord scales.** `T.chordKey(key, chord)` is the scale as it sounds under a
+chord: the scale note on the same letter as a chord note the scale lacks moves
+the semitone to it (`T.ivSteps` reads the letter off the interval), never
+moving a scale note that is itself in the chord. Only seven-note scales bend.
+A key may carry its own `iv`, and `T.pitch`, `T.floorPos`, `T.noteName` all
+read it. Every slot has `slot.key` (also `slot.chord.key`), and **everything
+time-dependent in the catalogue turns positions into pitches through the key
+at that time** (`keyAt`, `pitchOf`, `realise`, `fillLine`'s per-note `P[m]`,
+transformations reading a position under the old time and writing it under the
+new). Positions still count the same, so a third above is +2 under any chord.
+Adding code that writes `T.pitch(ctx.key, ...)` for a note in time is a bug
+unless it is a chord root (roots are never bent).
 
 ## The checks (`M.make`)
 
@@ -124,7 +152,7 @@ leaves the rest at 100. The user asked for both "all velocity 100" and
 
 `C.newState()` is one plain table; `C.clampState` puts every field back inside
 what exists. Saved as `key=value;` in one ExtState string. Lists that differ
-between contexts are kept **by name** (`prog`, `inst`, `section`, `type`,
+between contexts are kept **by name** (`chain`, `inst`, `section`, `type`,
 `entry`), never by index. Loaded values go through `tonumber(v) or v`, so
 `loadState` turns the name fields back into strings.
 
@@ -139,6 +167,21 @@ buttons out wrapping at the window's edge using `CalcTextSize`.
 **No dead controls.** A section plays harmony only, so choosing one hides
 Rhythm and Melody rather than greying them. A type an instrument does not play
 shows the reason instead of an empty grid.
+
+**Small until asked** ([0010](docs/decisions/0010-show-a-family-at-a-time.md)).
+The window was busy, so two steps show one row until you reach into them:
+
+- **Chords**: the chain is one row of buttons with +, - and the bars. The
+  editor (degree, family, chord, "Start again from", Done) appears under it
+  only while a chord is open (`ui.edit`). `ui.chordFam` is which family the
+  editor shows.
+- **Instrument**: one row of families plus Sections, with the register on the
+  same row, then the instruments of the family showing. `ui.instFam` is only
+  where you are looking - it is not saved and does not change the instrument.
+
+Labels repeat across rows (a degree button and a chain button can both read
+"IV"; "Strings" is a family and a section), so `test_ui` reads the chain from
+the block's name and picks a section as the later of two buttons.
 
 ## Colour
 
@@ -178,11 +221,11 @@ tools/test.sh
 
 | | |
 | --- | --- |
-| `test_theory.lua` | Scales against ScaleView, positions, spelling, and every progression in every seven-note scale voiced and audited. |
+| `test_theory.lua` | Scales against ScaleView, positions, spelling, the chord tables, chord scales, chains, and every progression in every seven-note scale voiced and audited. |
 | `test_catalogue.lua` | Every entry for every instrument and section, in eleven other settings, checked rule by rule; then particular things by name. |
 | `test_midi.lua` | The writer, read back by a parser that is not itself, format 0 and 1. |
 | `test_place.lua` | Insert, sections on new tracks, export, audition, against the mocked REAPER. |
-| `test_ui.lua` | The real script against a mocked ReaImGui: clicks every button in every category, inserts, exports, auditions, reloads saved and nonsense settings. |
+| `test_ui.lua` | The real script against a mocked ReaImGui: clicks every button in every category, every chord in every family, builds and trims the chain, inserts, exports, auditions, reloads saved and nonsense settings. |
 
 `test_catalogue` tallies each rule over every note it applies to and reports
 the rule once, with a count and the first example that broke it, so a broken
@@ -193,7 +236,9 @@ what it covers - removing the speed check, breathing, the chord snapping, the
 double basses' octave, parallel fifths, the leading-tone rule, contrary
 motion, the dark ink, the section's hidden categories - and watching it fail.
 The leading-tone test passed with the rule removed the first time; it now
-audits every voiced chord.
+audits every voiced chord. The catalogue suite did not notice chord scales
+being switched off (melodies simply avoided the borrowed note); it now checks
+by name that a borrowed C major in C minor is played with E natural.
 
 `docs/CATALOGUE.md` is generated; `tools/test.sh` fails when it is stale:
 `lua5.4 tools/catalogue_md.lua > docs/CATALOGUE.md`. A fresh container has no

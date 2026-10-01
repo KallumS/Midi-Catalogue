@@ -64,10 +64,15 @@ M.SCALES = {
 
 local NUMERALS = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII" }
 
--- A key is the pair of indices the window picks, and nothing else.
+-- A key is the pair of indices the window picks. A chord scale (M.chordKey)
+-- is a key that also carries its own intervals: the same scale with a note
+-- or two bent to the chord sounding over it.
 function M.key(root, scale) return { root = root or 1, scale = scale or 1 } end
 
-function M.scaleLen(key) return #M.SCALES[key.scale].iv end
+local function ivOf(key) return key.iv or M.SCALES[key.scale].iv end
+M.ivOf = ivOf
+
+function M.scaleLen(key) return #ivOf(key) end
 
 function M.rootPc(key)
   local rt = M.ROOTS[key.root]
@@ -80,7 +85,7 @@ end
 
 -- The MIDI pitch of a scale position.
 function M.pitch(key, pos)
-  local iv  = M.SCALES[key.scale].iv
+  local iv  = ivOf(key)
   local n   = #iv
   local oct = math.floor(pos / n)
   local k   = pos - oct * n
@@ -90,7 +95,7 @@ end
 -- The highest position at or below a pitch. Every pitch has one, because the
 -- root is in every octave.
 function M.floorPos(key, midi)
-  local iv   = M.SCALES[key.scale].iv
+  local iv   = ivOf(key)
   local n    = #iv
   local root = M.rootPc(key)
   local oct  = math.floor((midi - root) / 12)
@@ -125,7 +130,7 @@ function M.pc(key, pos) return M.pitch(key, pos) % 12 end
 -- Spelled for the key: the seventh of F# major comes out E#, not F.
 function M.noteName(key, pos)
   local sc  = M.SCALES[key.scale]
-  local n   = #sc.iv
+  local n   = #ivOf(key)
   local oct = math.floor(pos / n)
   local k   = pos - oct * n
   local letter = (M.ROOTS[key.root].letter + sc.letters[k + 1]) % 7
@@ -171,6 +176,17 @@ function M.degreeNumeral(key, degree, ascii)
   if q == "diminished" then n = n .. (ascii and "dim" or "\u{00B0}") end
   if q == "augmented"  then n = n .. (ascii and "aug" or "+") end
   return n
+end
+
+M.DEGREE_TITLES = { "Tonic", "Supertonic", "Mediant", "Subdominant",
+                    "Dominant", "Submediant", "Leading Tone" }
+
+-- Starting Blocks' degree names. Only the seven-note scales carry them, and
+-- the seventh is a leading tone only when it leans on the tonic a semitone up.
+function M.degreeTitle(key, degree)
+  if M.scaleLen(key) ~= 7 then return "Degree " .. (degree + 1) end
+  if degree == 6 and M.pitch(key, 7) - M.pitch(key, 6) ~= 1 then return "Subtonic" end
+  return M.DEGREE_TITLES[degree + 1] or ("Degree " .. (degree + 1))
 end
 
 -- The seventh degree leans on the tonic only when it sits a semitone under
@@ -242,10 +258,125 @@ end
 ------------------------------------------------------------------------------
 -- Chords
 --
--- Every chord is built from the scale, by stacking scale steps on a degree,
--- so it is always in key. What differs is the size of the step.
+-- Starting Blocks' chord tables, copied unchanged: one row per chord carrying
+-- its own name, symbol and intervals (semitones from the chord's root), in
+-- the families of Wikipedia's list of chords, plus the diatonic chords the
+-- scale hands you for free. Do not tidy them independently of Starting
+-- Blocks.
 ------------------------------------------------------------------------------
 
+M.FAMILIES = { "Diatonic", "Triads", "6ths & 7ths", "Extended", "Altered",
+               "Sus & Add", "Quartal", "Named" }
+
+local TR, S7, EX, AL, SA, QU, NA = 2, 3, 4, 5, 6, 7, 8   -- indices into FAMILIES
+
+M.CHORDS = {
+  { sym="maj",  name="Major",                  iv={0,4,7},          fam=TR },
+  { sym="m",    name="Minor",                  iv={0,3,7},          fam=TR },
+  { sym="dim",  name="Diminished",             iv={0,3,6},          fam=TR },
+  { sym="aug",  name="Augmented",              iv={0,4,8},          fam=TR },
+  { sym="b5",   name="Flat Five",              iv={0,4,6},          fam=TR },
+  { sym="5",    name="Fifth (Power)",          iv={0,7},            fam=TR },
+
+  { sym="6",       name="Sixth",                    iv={0,4,7,9},     fam=S7 },
+  { sym="m6",      name="Minor Sixth",              iv={0,3,7,9},     fam=S7 },
+  { sym="6/9",     name="Six-Nine",                 iv={0,4,7,9,14},  fam=S7 },
+  { sym="m6/9",    name="Minor Six-Nine",           iv={0,3,7,9,14},  fam=S7 },
+  { sym="7",       name="Dominant Seventh",         iv={0,4,7,10},    fam=S7 },
+  { sym="maj7",    name="Major Seventh",            iv={0,4,7,11},    fam=S7 },
+  { sym="m7",      name="Minor Seventh",            iv={0,3,7,10},    fam=S7 },
+  { sym="mMaj7",   name="Minor-Major Seventh",      iv={0,3,7,11},    fam=S7 },
+  { sym="m7b5",    name="Half-Diminished Seventh",  iv={0,3,6,10},    fam=S7 },
+  { sym="dim7",    name="Diminished Seventh",       iv={0,3,6,9},     fam=S7 },
+  { sym="7#5",     name="Augmented Seventh",        iv={0,4,8,10},    fam=S7 },
+  { sym="maj7#5",  name="Augmented Major Seventh",  iv={0,4,8,11},    fam=S7 },
+  { sym="7b5",     name="Seventh Flat Five",        iv={0,4,6,10},    fam=S7 },
+  { sym="dimMaj7", name="Diminished Major Seventh", iv={0,3,6,11},    fam=S7 },
+  { sym="7/6",     name="Seven Six",                iv={0,4,7,9,10},  fam=S7 },
+
+  { sym="9",     name="Ninth",               iv={0,4,7,10,14},       fam=EX },
+  { sym="maj9",  name="Major Ninth",         iv={0,4,7,11,14},       fam=EX },
+  { sym="m9",    name="Minor Ninth",         iv={0,3,7,10,14},       fam=EX },
+  { sym="mMaj9", name="Minor-Major Ninth",   iv={0,3,7,11,14},       fam=EX },
+  { sym="11",    name="Eleventh",            iv={0,4,7,10,14,17},    fam=EX },
+  { sym="maj11", name="Major Eleventh",      iv={0,4,7,11,14,17},    fam=EX },
+  { sym="m11",   name="Minor Eleventh",      iv={0,3,7,10,14,17},    fam=EX },
+  { sym="13",    name="Thirteenth",          iv={0,4,7,10,14,17,21}, fam=EX },
+  { sym="maj13", name="Major Thirteenth",    iv={0,4,7,11,14,17,21}, fam=EX },
+  { sym="m13",   name="Minor Thirteenth",    iv={0,3,7,10,14,17,21}, fam=EX },
+
+  { sym="7b9",       name="Seventh Flat Nine",             iv={0,4,7,10,13},    fam=AL },
+  { sym="7#9",       name="Seventh Sharp Nine",            iv={0,4,7,10,15},    fam=AL },
+  { sym="7#11",      name="Seventh Sharp Eleven",          iv={0,4,7,10,18},    fam=AL },
+  { sym="7b13",      name="Seventh Flat Thirteen",         iv={0,4,7,10,20},    fam=AL },
+  { sym="7#5b9",     name="Seventh Sharp Five Flat Nine",  iv={0,4,8,10,13},    fam=AL },
+  { sym="7#5#9",     name="Seventh Sharp Five Sharp Nine", iv={0,4,8,10,15},    fam=AL },
+  { sym="7b5b9",     name="Seventh Flat Five Flat Nine",   iv={0,4,6,10,13},    fam=AL },
+  { sym="7alt",      name="Altered Dominant",              iv={0,4,8,10,13,15}, fam=AL },
+  { sym="13b9",      name="Thirteenth Flat Nine",          iv={0,4,7,10,13,21}, fam=AL },
+  { sym="maj7#11",   name="Major Seventh Sharp Eleven",    iv={0,4,7,11,18},    fam=AL },
+  { sym="m9b5",      name="Minor Ninth Flat Five",         iv={0,3,6,10,14},    fam=AL },
+  { sym="9#5",       name="Ninth Augmented Fifth",         iv={0,4,8,10,14},    fam=AL },
+  { sym="9b5",       name="Ninth Flat Fifth",              iv={0,4,6,10,14},    fam=AL },
+  { sym="9#11",      name="Augmented Eleventh",            iv={0,4,7,10,14,18}, fam=AL },
+  { sym="maj7#5#11", name="Augmented Major Seventh Sharp Eleven", iv={0,4,8,11,18}, fam=AL },
+  { sym="13b9b5",    name="Thirteenth Flat Nine Flat Five", iv={0,4,6,10,13,21}, fam=AL },
+
+  { sym="sus2",     name="Suspended Second",             iv={0,2,7},       fam=SA },
+  { sym="sus4",     name="Suspended Fourth",             iv={0,5,7},       fam=SA },
+  { sym="7sus4",    name="Seventh Suspended Fourth",     iv={0,5,7,10},    fam=SA },
+  { sym="9sus4",    name="Ninth Suspended Fourth",       iv={0,5,7,10,14}, fam=SA },
+  { sym="maj7sus4", name="Major Seventh Suspended Fourth", iv={0,5,7,11},  fam=SA },
+  { sym="add9",     name="Added Ninth",                  iv={0,4,7,14},    fam=SA },
+  { sym="m(add9)",  name="Minor Added Ninth",            iv={0,3,7,14},    fam=SA },
+  { sym="add4",     name="Added Fourth",                 iv={0,4,5,7},     fam=SA },
+  { sym="add11",    name="Added Eleventh",               iv={0,4,7,17},    fam=SA },
+  { sym="add13",    name="Added Thirteenth",             iv={0,4,7,21},    fam=SA },
+  { sym="add2",     name="Added Second",                 iv={0,2,4,7},     fam=SA },
+  { sym="m(add2)",  name="Minor Added Second",           iv={0,2,3,7},     fam=SA },
+
+  { sym="Q4/3",    name="Quartal Triad",       iv={0,5,10},    fam=QU },
+  { sym="Q4/4",    name="Quartal Tetrad",      iv={0,5,10,15}, fam=QU },
+  { sym="Q5/3",    name="Quintal Triad",       iv={0,7,14},    fam=QU },
+  { sym="WT3",     name="Whole-Tone Trichord", iv={0,2,4},     fam=QU },
+  { sym="cluster", name="Chromatic Cluster",   iv={0,1,2},     fam=QU },
+  { sym="dia-cl",  name="Diatonic Cluster",    iv={0,2,4,5},   fam=QU },
+
+  -- Voiced as they stand rather than reduced to a pitch-class set: the list
+  -- gives the Tristan chord as 0 3 6 10, which makes it a half-diminished
+  -- seventh and indistinguishable from one.
+  { sym="Mystic",    name="Mystic (Scriabin)",   iv={0,6,10,16,21,26}, fam=NA },
+  { sym="Petrushka", name="Petrushka",           iv={0,4,6,7,10,13},   fam=NA },
+  { sym="Tristan",   name="Tristan",             iv={0,6,10,15},       fam=NA },
+  { sym="So What",   name="So What",             iv={0,5,10,15,19},    fam=NA },
+  { sym="Dream",     name="Dream",               iv={0,5,6,7},         fam=NA },
+  { sym="Vienna",    name="Viennese Trichord",   iv={0,1,6},           fam=NA },
+  { sym="Vienna II", name="Viennese Trichord II", iv={0,6,7},          fam=NA },
+  { sym="Napoleon",  name="Ode-to-Napoleon",     iv={0,1,4,5,8,9},     fam=NA },
+  { sym="Elektra",   name="Elektra",             iv={0,7,9,13,16},     fam=NA },
+  { sym="Farben",    name="Farben",              iv={0,8,11,16,21},    fam=NA },
+  { sym="It+6",      name="Italian Sixth",       iv={0,4,10},          fam=NA },
+  { sym="Fr+6",      name="French Sixth",        iv={0,4,6,10},        fam=NA },
+  { sym="Ger+6",     name="German Sixth",        iv={0,4,7,10},        fam=NA },
+}
+
+-- The chords the key hands you for free, as offsets in scale steps from the
+-- degree. Always in key, which is why this is the first family. `suffix` is
+-- what goes after the numeral in a progression's name.
+M.DIATONIC = {
+  { name = "Triad", offsets = {0,2,4},           suffix = "" },
+  { name = "7th",   offsets = {0,2,4,6},         suffix = "7" },
+  { name = "9th",   offsets = {0,2,4,6,8},       suffix = "9" },
+  { name = "11th",  offsets = {0,2,4,6,8,10},    suffix = "11" },
+  { name = "13th",  offsets = {0,2,4,6,8,10,12}, suffix = "13" },
+  { name = "6th",   offsets = {0,2,4,5},         suffix = "6" },
+  { name = "sus2",  offsets = {0,1,4},           suffix = "sus2" },
+  { name = "sus4",  offsets = {0,3,4},           suffix = "sus4" },
+  { name = "5th",   offsets = {0,4},             suffix = "5" },
+}
+
+-- Shapes the harmony types build for themselves, whatever chord was chosen:
+-- a quartal or cluster texture stacks its own steps on the chord's degree.
 M.CHORD_KINDS = {
   triad   = { 0, 2, 4 },
   seventh = { 0, 2, 4, 6 },
@@ -255,22 +386,232 @@ M.CHORD_KINDS = {
   cluster4 = { 0, 1, 2, 3 },
 }
 
--- The chord as positions from its root in the lowest octave, and as pitch
--- classes in member order (root first). `essential` is which members a
--- voicing may not leave out.
-function M.chord(key, degree, kind)
-  local offs = M.CHORD_KINDS[kind] or M.CHORD_KINDS.triad
-  local pcs, positions = {}, {}
-  for i, o in ipairs(offs) do
-    positions[i] = degree + o
-    pcs[i] = M.pc(key, degree + o)
+function M.diatonicByName(name)
+  for _, d in ipairs(M.DIATONIC) do if d.name == name then return d end end
+  return nil
+end
+
+function M.chordBySym(sym)
+  for _, c in ipairs(M.CHORDS) do if c.sym == sym then return c end end
+  return nil
+end
+
+-- Which members a voicing may not leave out. The root and the third make a
+-- chord what it is, a seventh makes it a seventh chord, and the top of an
+-- extended or altered chord is its colour; a fifth can go.
+local function essentialFor(n, tertian)
+  if n <= 2 then local e = {}; for i = 1, n do e[i] = i end; return e end
+  if n == 3 then return tertian and { 1, 2 } or { 1, 2, 3 } end
+  local e = { 1, 2, 4 }
+  if n >= 5 then e[#e + 1] = n end
+  return e
+end
+
+-- A chord on a scale degree. `spec` is one of:
+--   a kind name from M.CHORD_KINDS ("triad", "quartal4", ...), stacked from
+--     the scale;
+--   { fam = "d", name = "7th" }, a diatonic chord from M.DIATONIC;
+--   { fam = "c", sym = "maj7" }, a chord from M.CHORDS on the degree's root,
+--     whatever the scale says - which is how a borrowed or altered chord gets
+--     into a progression.
+-- Returns pitch classes in member order (root first), with `essential`.
+function M.chord(key, degree, spec)
+  local pcs, seen = {}, {}
+  local function addPc(pc)
+    pc = pc % 12
+    if not seen[pc] then seen[pc] = true; pcs[#pcs + 1] = pc end
+  end
+  local kind, tertian, ivs
+  if type(spec) == "table" and spec.fam == "c" then
+    local c = M.chordBySym(spec.sym) or M.CHORDS[1]
+    local root = M.pc(key, degree)
+    for _, iv in ipairs(c.iv) do addPc(root + iv) end
+    tertian = (c.iv[2] == 3 or c.iv[2] == 4)
+    kind = (#pcs == 3 and tertian and c.iv[3] == 7) and "triad" or c.sym
+    ivs = c.iv
+  else
+    local offs
+    if type(spec) == "table" then
+      local d = M.diatonicByName(spec.name) or M.DIATONIC[1]
+      offs = d.offsets
+      kind = (d.name == "Triad") and "triad" or ((d.name == "7th") and "seventh" or d.name)
+      tertian = not d.name:find("sus")
+    else
+      offs = M.CHORD_KINDS[spec] or M.CHORD_KINDS.triad
+      kind = spec or "triad"
+      tertian = (kind == "triad" or kind == "seventh")
+    end
+    for _, o in ipairs(offs) do addPc(M.pc(key, degree + o)) end
   end
   local essential
   if kind == "triad" then essential = { 1, 2 }
   elseif kind == "seventh" then essential = { 1, 2, 4 }
-  else essential = {}; for i = 1, #offs do essential[i] = i end end
-  return { degree = degree, kind = kind, pcs = pcs, positions = positions,
-           root = pcs[1], essential = essential }
+  elseif type(spec) == "string" then essential = {}; for i = 1, #pcs do essential[i] = i end
+  else essential = essentialFor(#pcs, tertian) end
+  return { degree = degree, kind = kind, pcs = pcs, root = pcs[1], essential = essential, ivs = ivs }
+end
+
+-- The scale as it sounds under a chord. A chord can hold notes the scale does
+-- not - the major third of a borrowed I in a minor key, the leading tone of a
+-- V7 in natural minor, the F# of a D7 in C. Under that chord the scale bends
+-- to meet it: the scale note on the same letter as the chord's note moves the
+-- semitone to it, so a C major chord in C minor turns Eb into E for as long as
+-- it lasts, and melodies and figures written in scale steps land on the
+-- chord's own notes instead of grinding against them. A scale note that is
+-- itself in the chord is never moved, and a chord note two semitones from
+-- anything in the scale is left alone.
+--
+-- Which scale note a chord note belongs to is read off the interval, the way
+-- it is spelled: a third is two steps up, a flat five or a sharp five is still
+-- the fifth, a sharp eleven is the fourth step.
+local STEPS_IN_OCTAVE = { [0]=0, 1, 1, 2, 2, 3, 4, 4, 4, 5, 6, 6 }
+local STEPS_ABOVE     = { [0]=0, 1, 1, 1, 2, 3, 3, 4, 5, 5, 6, 6 }
+function M.ivSteps(iv)
+  if iv < 12 then return STEPS_IN_OCTAVE[iv] end
+  return 7 + STEPS_ABOVE[(iv - 12) % 12]
+end
+
+function M.chordKey(key, chord)
+  local base = ivOf(key)
+  local n = #base
+  if n ~= 7 or not chord.ivs then
+    -- Only a chord built from outside the scale can need bending, and only a
+    -- seven-note scale has a letter for every note to bend.
+    return key
+  end
+  local iv = {}
+  for i, v in ipairs(base) do iv[i] = v end
+  local rootPc = M.rootPc(key)
+  local changed = false
+  for _, civ in ipairs(chord.ivs) do
+    local pc = (M.pc(key, chord.degree) + civ) % 12
+    local inScale = false
+    for _, v in ipairs(iv) do if (rootPc + v) % 12 == pc then inScale = true end end
+    if not inScale then
+      local k = (chord.degree + M.ivSteps(civ)) % n
+      local cur = (rootPc + iv[k + 1]) % 12
+      local diff = (pc - cur + 12) % 12
+      if (diff == 1 or diff == 11) and not M.hasPc(chord, cur) then
+        local nv = iv[k + 1] + ((diff == 1) and 1 or -1)
+        local below = (k > 0) and iv[k] or -1
+        local above = (k < n - 1) and iv[k + 2] or 12
+        if nv > below and nv < above then iv[k + 1] = nv; changed = true end
+      end
+    end
+  end
+  if not changed then return key end
+  return { root = key.root, scale = key.scale, iv = iv }
+end
+
+------------------------------------------------------------------------------
+-- A chain of chords
+--
+-- The progression is a chain the user builds: each link is a scale degree and
+-- a chord on it, { degree, fam = "d" | "c", name }, where `name` is a diatonic
+-- chord's name or a chord's symbol. Kept by name, never by index, so it
+-- survives the tables growing. Saved as text, "0:d:Triad,4:c:7".
+------------------------------------------------------------------------------
+
+M.MAX_CHAIN = 8
+
+function M.chainString(chain)
+  local out = {}
+  for i, c in ipairs(chain) do out[i] = c.degree .. ":" .. c.fam .. ":" .. c.name end
+  return table.concat(out, ",")
+end
+
+-- Reads a chain back, dropping any link that no longer means anything in this
+-- scale (a sixth degree in a pentatonic, a chord that is not in the tables).
+function M.parseChain(s, key)
+  local out = {}
+  for tok in tostring(s or ""):gmatch("[^,]+") do
+    local d, fam, name = tok:match("^(%-?%d+):([dc]):(.+)$")
+    d = tonumber(d)
+    if d and d >= 0 and d < M.scaleLen(key) and #out < M.MAX_CHAIN then
+      if (fam == "d" and M.diatonicByName(name)) or (fam == "c" and M.chordBySym(name)) then
+        out[#out + 1] = { degree = d, fam = fam, name = name }
+      end
+    end
+  end
+  return out
+end
+
+function M.chainSpec(link)
+  if link.fam == "c" then return { fam = "c", sym = link.name } end
+  return { fam = "d", name = link.name }
+end
+
+-- How a link is written in a progression: the numeral of its degree, cased
+-- by the chord the scale builds there, then the chord. A diatonic chord adds
+-- only its extension (V7, ii9); a chosen chord takes an upper-case numeral
+-- and its own symbol (IVmaj7, IIm7, bVI is not needed - the root is always a
+-- degree of the scale).
+function M.linkLabel(key, link, ascii)
+  if link.fam == "d" then
+    local d = M.diatonicByName(link.name) or M.DIATONIC[1]
+    return M.degreeNumeral(key, link.degree, ascii) .. d.suffix
+  end
+  local sym = link.name
+  local sep = sym:match("^%u") and " " or ""
+  if sym == "maj" then sym = "" end
+  return NUMERALS[(link.degree % 8) + 1] .. sep .. sym
+end
+
+function M.chainName(key, chain, ascii)
+  local out = {}
+  for i, link in ipairs(chain) do out[i] = M.linkLabel(key, link, ascii) end
+  return table.concat(out, "-")
+end
+
+-- The symbol a set of pitch classes goes by, read off the chord tables: the
+-- first chord whose notes are exactly these, from this root. "" for a major
+-- triad, nil for a set with no name here.
+function M.symbolOf(pcs, root)
+  local want = {}
+  for _, pc in ipairs(pcs) do want[(pc - root) % 12] = true end
+  local n = 0
+  for _ in pairs(want) do n = n + 1 end
+  for _, c in ipairs(M.CHORDS) do
+    local have, m = {}, 0
+    for _, iv in ipairs(c.iv) do
+      if not have[iv % 12] then have[iv % 12] = true; m = m + 1 end
+    end
+    if m == n then
+      local same = true
+      for k in pairs(want) do if not have[k] then same = false end end
+      if same then return (c.sym == "maj") and "" or c.sym end
+    end
+  end
+  return nil
+end
+
+-- A link's chord name and its notes, spelled in the scale as it sounds under
+-- that chord: "C", "C E G" for a borrowed C major in C minor; "Dm7",
+-- "D F A C" for ii7 in C major.
+function M.linkSpelling(key, link)
+  local ch = M.chord(key, link.degree, M.chainSpec(link))
+  local ck = M.chordKey(key, ch)
+  local names = {}
+  for _, pc in ipairs(ch.pcs) do
+    local name
+    for s = link.degree, link.degree + 13 do
+      if M.pc(ck, s) == pc then name = M.noteName(ck, s); break end
+    end
+    names[#names + 1] = name or SHARP_NAMES[pc + 1]
+  end
+  local sym = (link.fam == "c") and ((link.name == "maj") and "" or link.name)
+              or M.symbolOf(ch.pcs, ch.root) or link.name
+  return names[1] .. (sym:match("^%u") and " " or "") .. sym, table.concat(names, " ")
+end
+
+-- A chain from one of the progressions, every chord diatonic: triads, or
+-- sevenths.
+function M.presetChain(prog, seventh)
+  local out = {}
+  for i, d in ipairs(prog.degrees) do
+    out[i] = { degree = d, fam = "d", name = seventh and "7th" or "Triad" }
+  end
+  return out
 end
 
 function M.hasPc(ch, pc)
@@ -523,7 +864,8 @@ end
 function M.plane(key, first, chords)
   local out = { first }
   local firstPos = {}
-  for i, p in ipairs(first) do firstPos[i] = M.nearestPos(key, p) end
+  local k1 = chords[1].key or key
+  for i, p in ipairs(first) do firstPos[i] = M.nearestPos(k1, p) end
   for c = 2, #chords do
     local shift = chords[c].degree - chords[1].degree
     local prev = out[c - 1]
@@ -532,7 +874,8 @@ function M.plane(key, first, chords)
     local best, bestD
     for o = -1, 1 do
       local v = {}
-      for i, s in ipairs(firstPos) do v[i] = M.pitch(key, s + shift + o * M.scaleLen(key)) end
+      local kc = chords[c].key or key
+      for i, s in ipairs(firstPos) do v[i] = M.pitch(kc, s + shift + o * M.scaleLen(key)) end
       local d = 0
       for i = 1, #v do d = d + math.abs(v[i] - prev[i]) end
       if not bestD or d < bestD then best, bestD = v, d end

@@ -196,6 +196,19 @@ local function count(label)
   return n
 end
 
+-- Instruments are shown a family at a time, so choosing one is two clicks.
+local O = dofile(C.SCRIPTS .. "mc_orchestra.lua")
+local function instrument(name)
+  for _, inst in ipairs(O.INSTRUMENTS) do
+    if inst.name == name then click(inst.family); click(name); return end
+  end
+  for _, e in ipairs(O.ENSEMBLES) do
+    -- "Strings" is a family and a section; the section is the later button.
+    if e.name == name then click("Sections"); frame(); click(name, count(name)); return end
+  end
+  error("no instrument called " .. name)
+end
+
 local function fresh()
   P.reset()
   P.ext = {}
@@ -215,11 +228,13 @@ ok(#g.buttons > 50, "the first frame draws its buttons")
 ok(#g.rects > 1, "and the roll, with notes in it")
 eq(g.bgAlpha, 1.0, "the window is solid")
 eq(g.windowBg, 0x23272EFF, "on the house ground")
-for _, step in ipairs({ "Scale", "Chords underneath", "Instrument", "Catalogue", "Shape it" }) do
+for _, step in ipairs({ "Scale", "Chords", "Instrument", "Catalogue", "Shape it" }) do
   ok(has(g.headings, step), "the " .. step .. " step is on screen")
 end
 ok(has(g.texts, "C  D  E  F  G  A  B"), "the scale's notes are spelled out under it")
-ok(count("I-V-vi-IV") == 1, "the progressions are named in this scale's numerals")
+for _, chip in ipairs({ "I", "V", "vi", "IV" }) do
+  eq(count(chip), 1, "the chain starts as I-V-vi-IV: " .. chip)
+end
 
 -- Every button wears the dark ink, chosen or not.
 local function allInked(what)
@@ -273,7 +288,7 @@ local Ccat = dofile(C.SCRIPTS .. "mc_catalogue.lua")
 local typeFailures = {}
 for _, cat in ipairs(Ccat.CATEGORIES) do
   for _, inst in ipairs({ "Piano", "Violin I", "Tuba", "Timpani", "Flute", "Harp" }) do
-    click(inst)
+    instrument(inst)
     click(cat.name)
     for _, ty in ipairs(cat.types) do
       local good, err = pcall(click, ty)
@@ -291,13 +306,13 @@ ok(#typeFailures == 0, "every type draws on every family: " .. table.concat(type
 -- The timpani do not play melodies, and the window says so instead of
 -- showing an empty grid.
 fresh()
-click("Timpani")
+instrument("Timpani")
 click("Melody")
 ok(has(g.texts, "Timpani are tuned before they play"), "the timpani explain why there are no melodies")
 
 -- A section hides the categories it does not play.
 fresh()
-click("Strings")
+instrument("Strings")
 eq(count("Rhythm"), 0, "a section offers no rhythm category")
 eq(count("Melody"), 0, "or melody")
 eq(count("Harmony"), 1, "only harmony")
@@ -310,7 +325,7 @@ eq(P.tracks[6].name, "Double Bass", "double basses last")
 ok(has(g.texts, "Inserted 5 tracks"), "and says so")
 
 -- Choosing an instrument again brings the other categories back.
-click("Cello")
+instrument("Cello")
 eq(count("Rhythm"), 1, "an instrument brings rhythm back")
 
 -- Insert puts one item on the selected track.
@@ -350,13 +365,100 @@ end
 ok(ons > 0 and offs >= 1, "on and off")
 
 ------------------------------------------------------------------------------
+-- The instruments take two rows, not one per family
+------------------------------------------------------------------------------
+
+fresh()
+for _, fam in ipairs({ "Strings", "Woodwind", "Brass", "Percussion", "Keys & Harp", "Sections" }) do
+  eq(count(fam), 1, "a button for the " .. fam .. " family")
+end
+eq(count("Piano"), 1, "the chosen instrument's family is showing")
+eq(count("Violin I"), 0, "and no other family's instruments")
+click("Brass")
+eq(count("Tuba"), 1, "a family shows its instruments")
+eq(count("Piano"), 0, "and only those")
+ok(has(g.headings, "Piano"), "looking at another family does not change the instrument")
+click("Tuba")
+ok(has(g.headings, "Tuba"), "clicking one does")
+
+------------------------------------------------------------------------------
+-- The chain of chords
+------------------------------------------------------------------------------
+
+fresh()
+eq(count("Done"), 0, "the chord editor starts closed")
+eq(count("Sus & Add"), 0, "so no chord families on screen")
+click("V")
+eq(count("Done"), 1, "clicking a chord opens the editor")
+ok(has(g.texts, "Chord 2:  G   -   G B D"), "on that chord, spelled")
+click("6ths & 7ths")
+click("7")
+ok(has(g.headings, "I-V7-vi-IV"), "choosing 7 makes it V7, in the block's name")
+click("ii")
+ok(has(g.headings, "I-II7-vi-IV"), "moving it to the second degree makes it II7 - a D7, borrowed")
+ok(has(g.texts, "D F# A C"), "with its F#")
+click("Done")
+eq(count("Done"), 0, "Done closes the editor")
+
+-- Add and remove.
+-- The open editor shows the degrees by the same numerals as the chain, so
+-- the chain is read from the block's name.
+click("+")
+ok(has(g.headings, "I-II7-vi-IV-IV "), "+ adds a copy of the last chord")
+eq(count("Done"), 1, "and opens it")
+click("-")
+ok(has(g.headings, "I-II7-vi-IV "), "- takes it away again")
+-- Chords can be added up to eight.
+for _ = 1, 10 do frame(); if buttonIndex("+") then click("+") end end
+eq(count("+"), 0, "no + past eight chords")
+-- And taken away down to one.
+for _ = 1, 10 do frame(); if buttonIndex("-") then click("-") end end
+eq(count("-"), 0, "no - for the last chord")
+ok(count("I") >= 1, "one chord left")
+frame()
+ok(#g.rects > 1, "and the catalogue still has something to show")
+
+-- A progression replaces the chain.
+fresh()
+click("I")
+click("ii-V-I-I")
+ok(has(g.headings, "C Major ii-V-I-I "), "ii-V-I-I replaces the chain")
+eq(count("Done"), 0, "and the editor closes")
+
+-- The chain is saved.
+fresh()
+click("IV")
+click("6ths & 7ths")
+click("maj7")
+atexitFn()
+ok(P.ext["MidiCatalogue:state"]:find("chain=0:d:Triad,4:d:Triad,5:d:Triad,3:c:maj7", 1, true),
+   "the chain is saved by name")
+
+-- Every chord family on every chord draws, and the catalogue under it.
+fresh()
+click("V")
+local Th = dofile(C.SCRIPTS .. "mc_theory.lua")
+local famFailures = {}
+for _, fam in ipairs(Th.FAMILIES) do
+  click(fam)
+  local labels = {}
+  if fam == "Diatonic" then for _, d in ipairs(Th.DIATONIC) do labels[#labels + 1] = d.name end
+  else for _, ch in ipairs(Th.CHORDS) do if Th.FAMILIES[ch.fam] == fam then labels[#labels + 1] = ch.sym end end end
+  for _, l in ipairs(labels) do
+    local good, err = pcall(click, l)
+    if not good then famFailures[#famFailures + 1] = fam .. "/" .. l .. ": " .. tostring(err) end
+  end
+end
+ok(#famFailures == 0, "every chord can be chosen: " .. table.concat(famFailures, "; "))
+
+------------------------------------------------------------------------------
 -- Settings survive, and bad ones are put right
 ------------------------------------------------------------------------------
 
 fresh()
 click("D")
 click("Dorian")
-click("Cello")
+instrument("Cello")
 click("Melody")
 click("Arch")
 atexitFn()
@@ -368,7 +470,7 @@ ok(has(g.headings, "D Dorian"), "a reload comes back in D Dorian: " .. tostring(
 ok(has(g.headings, "Cello Arch"), "on the cello's arches")
 
 -- Settings from nowhere in particular are clamped rather than trusted.
-P.ext["MidiCatalogue:state"] = "root=99;scale=-3;prog=nonsense;bars=5;inst=kazoo;section=choir;" ..
+P.ext["MidiCatalogue:state"] = "root=99;scale=-3;chain=9:x:nonsense,,;bars=5;inst=kazoo;section=choir;" ..
   "register=Sideways;cat=Poetry;type=Limerick;transform=Upside;repeats=7;velocity=Loud;density=Thick"
 start()
 local good, err = pcall(frame)

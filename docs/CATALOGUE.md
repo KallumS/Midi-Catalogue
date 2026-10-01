@@ -551,6 +551,103 @@ Left out on the tuba: 6 clashes with the chords.
 - **4 voices, top falls, bass rises, half notes** (sparse) - The outer voices move in opposite directions - the top falls, bass rises - using inversions where they need them, 4 voices. Played half notes.
 - **4 voices, top falls, bass rises, quarters** (medium) - The outer voices move in opposite directions - the top falls, bass rises - using inversions where they need them, 4 voices. Played quarters.
 
+## The chords
+
+Any of these can sit on any degree of the scale, chained up to 8 at a time. The
+diatonic ones are built from the scale itself; the rest are Starting Blocks' table,
+on the degree's root. Under a chord with notes the scale lacks, the scale bends to
+meet it for as long as it lasts.
+
+| family | chord | name | semitones |
+| --- | --- | --- | --- |
+| Diatonic | Triad | built from the scale | steps 0 2 4 |
+| Diatonic | 7th | built from the scale | steps 0 2 4 6 |
+| Diatonic | 9th | built from the scale | steps 0 2 4 6 8 |
+| Diatonic | 11th | built from the scale | steps 0 2 4 6 8 10 |
+| Diatonic | 13th | built from the scale | steps 0 2 4 6 8 10 12 |
+| Diatonic | 6th | built from the scale | steps 0 2 4 5 |
+| Diatonic | sus2 | built from the scale | steps 0 1 4 |
+| Diatonic | sus4 | built from the scale | steps 0 3 4 |
+| Diatonic | 5th | built from the scale | steps 0 4 |
+| Triads | maj | Major | 0 4 7 |
+| Triads | m | Minor | 0 3 7 |
+| Triads | dim | Diminished | 0 3 6 |
+| Triads | aug | Augmented | 0 4 8 |
+| Triads | b5 | Flat Five | 0 4 6 |
+| Triads | 5 | Fifth (Power) | 0 7 |
+| 6ths & 7ths | 6 | Sixth | 0 4 7 9 |
+| 6ths & 7ths | m6 | Minor Sixth | 0 3 7 9 |
+| 6ths & 7ths | 6/9 | Six-Nine | 0 4 7 9 14 |
+| 6ths & 7ths | m6/9 | Minor Six-Nine | 0 3 7 9 14 |
+| 6ths & 7ths | 7 | Dominant Seventh | 0 4 7 10 |
+| 6ths & 7ths | maj7 | Major Seventh | 0 4 7 11 |
+| 6ths & 7ths | m7 | Minor Seventh | 0 3 7 10 |
+| 6ths & 7ths | mMaj7 | Minor-Major Seventh | 0 3 7 11 |
+| 6ths & 7ths | m7b5 | Half-Diminished Seventh | 0 3 6 10 |
+| 6ths & 7ths | dim7 | Diminished Seventh | 0 3 6 9 |
+| 6ths & 7ths | 7#5 | Augmented Seventh | 0 4 8 10 |
+| 6ths & 7ths | maj7#5 | Augmented Major Seventh | 0 4 8 11 |
+| 6ths & 7ths | 7b5 | Seventh Flat Five | 0 4 6 10 |
+| 6ths & 7ths | dimMaj7 | Diminished Major Seventh | 0 3 6 11 |
+| 6ths & 7ths | 7/6 | Seven Six | 0 4 7 9 10 |
+| Extended | 9 | Ninth | 0 4 7 10 14 |
+| Extended | maj9 | Major Ninth | 0 4 7 11 14 |
+| Extended | m9 | Minor Ninth | 0 3 7 10 14 |
+| Extended | mMaj9 | Minor-Major Ninth | 0 3 7 11 14 |
+| Extended | 11 | Eleventh | 0 4 7 10 14 17 |
+| Extended | maj11 | Major Eleventh | 0 4 7 11 14 17 |
+| Extended | m11 | Minor Eleventh | 0 3 7 10 14 17 |
+| Extended | 13 | Thirteenth | 0 4 7 10 14 17 21 |
+| Extended | maj13 | Major Thirteenth | 0 4 7 11 14 17 21 |
+| Extended | m13 | Minor Thirteenth | 0 3 7 10 14 17 21 |
+| Altered | 7b9 | Seventh Flat Nine | 0 4 7 10 13 |
+| Altered | 7#9 | Seventh Sharp Nine | 0 4 7 10 15 |
+| Altered | 7#11 | Seventh Sharp Eleven | 0 4 7 10 18 |
+| Altered | 7b13 | Seventh Flat Thirteen | 0 4 7 10 20 |
+| Altered | 7#5b9 | Seventh Sharp Five Flat Nine | 0 4 8 10 13 |
+| Altered | 7#5#9 | Seventh Sharp Five Sharp Nine | 0 4 8 10 15 |
+| Altered | 7b5b9 | Seventh Flat Five Flat Nine | 0 4 6 10 13 |
+| Altered | 7alt | Altered Dominant | 0 4 8 10 13 15 |
+| Altered | 13b9 | Thirteenth Flat Nine | 0 4 7 10 13 21 |
+| Altered | maj7#11 | Major Seventh Sharp Eleven | 0 4 7 11 18 |
+| Altered | m9b5 | Minor Ninth Flat Five | 0 3 6 10 14 |
+| Altered | 9#5 | Ninth Augmented Fifth | 0 4 8 10 14 |
+| Altered | 9b5 | Ninth Flat Fifth | 0 4 6 10 14 |
+| Altered | 9#11 | Augmented Eleventh | 0 4 7 10 14 18 |
+| Altered | maj7#5#11 | Augmented Major Seventh Sharp Eleven | 0 4 8 11 18 |
+| Altered | 13b9b5 | Thirteenth Flat Nine Flat Five | 0 4 6 10 13 21 |
+| Sus & Add | sus2 | Suspended Second | 0 2 7 |
+| Sus & Add | sus4 | Suspended Fourth | 0 5 7 |
+| Sus & Add | 7sus4 | Seventh Suspended Fourth | 0 5 7 10 |
+| Sus & Add | 9sus4 | Ninth Suspended Fourth | 0 5 7 10 14 |
+| Sus & Add | maj7sus4 | Major Seventh Suspended Fourth | 0 5 7 11 |
+| Sus & Add | add9 | Added Ninth | 0 4 7 14 |
+| Sus & Add | m(add9) | Minor Added Ninth | 0 3 7 14 |
+| Sus & Add | add4 | Added Fourth | 0 4 5 7 |
+| Sus & Add | add11 | Added Eleventh | 0 4 7 17 |
+| Sus & Add | add13 | Added Thirteenth | 0 4 7 21 |
+| Sus & Add | add2 | Added Second | 0 2 4 7 |
+| Sus & Add | m(add2) | Minor Added Second | 0 2 3 7 |
+| Quartal | Q4/3 | Quartal Triad | 0 5 10 |
+| Quartal | Q4/4 | Quartal Tetrad | 0 5 10 15 |
+| Quartal | Q5/3 | Quintal Triad | 0 7 14 |
+| Quartal | WT3 | Whole-Tone Trichord | 0 2 4 |
+| Quartal | cluster | Chromatic Cluster | 0 1 2 |
+| Quartal | dia-cl | Diatonic Cluster | 0 2 4 5 |
+| Named | Mystic | Mystic (Scriabin) | 0 6 10 16 21 26 |
+| Named | Petrushka | Petrushka | 0 4 6 7 10 13 |
+| Named | Tristan | Tristan | 0 6 10 15 |
+| Named | So What | So What | 0 5 10 15 19 |
+| Named | Dream | Dream | 0 5 6 7 |
+| Named | Vienna | Viennese Trichord | 0 1 6 |
+| Named | Vienna II | Viennese Trichord II | 0 6 7 |
+| Named | Napoleon | Ode-to-Napoleon | 0 1 4 5 8 9 |
+| Named | Elektra | Elektra | 0 7 9 13 16 |
+| Named | Farben | Farben | 0 8 11 16 21 |
+| Named | It+6 | Italian Sixth | 0 4 10 |
+| Named | Fr+6 | French Sixth | 0 4 6 10 |
+| Named | Ger+6 | German Sixth | 0 4 7 10 |
+
 ## The instruments
 
 Sounding pitches. `sweet` is where the catalogue writes; `fast` is the shortest

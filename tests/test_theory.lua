@@ -131,6 +131,78 @@ do
 end
 
 ------------------------------------------------------------------------------
+-- Every chord, and chains of them
+------------------------------------------------------------------------------
+
+eq(#T.CHORDS, 78, "Starting Blocks' 78 named chords")
+eq(#T.DIATONIC, 9, "and its 9 diatonic ones")
+do
+  local seen = {}
+  for _, c in ipairs(T.CHORDS) do
+    ok(not seen[c.sym], "every chord symbol is its own: " .. c.sym)
+    seen[c.sym] = true
+    eq(c.iv[1], 0, c.sym .. " starts on its root")
+    for i = 2, #c.iv do ok(c.iv[i] > c.iv[i - 1], c.sym .. " is written upwards") end
+    ok(T.FAMILIES[c.fam] ~= nil and c.fam > 1, c.sym .. " is in a family other than Diatonic")
+  end
+end
+
+-- A chord from the tables sits on the degree's root, whatever the scale says.
+do
+  local Cm = T.key(1, 2)
+  eqList(T.chord(Cm, 0, { fam = "c", sym = "maj" }).pcs, { 0, 4, 7 }, "a C major chord in C minor has E natural")
+  eqList(T.chord(Cmaj, 1, { fam = "c", sym = "7" }).pcs, { 2, 6, 9, 0 }, "D7 in C has F#")
+  eqList(T.chord(Cmaj, 1, { fam = "d", name = "7th" }).pcs, { 2, 5, 9, 0 }, "the diatonic ii7 has F")
+  eqList(T.chord(Cmaj, 4, { fam = "c", sym = "7#9" }).essential, { 1, 2, 4, 5 },
+         "an altered chord keeps root, third, seventh and its colour")
+  eqList(T.chord(Cmaj, 0, { fam = "c", sym = "maj" }).essential, { 1, 2 }, "a triad may lose its fifth")
+  eqList(T.chord(Cmaj, 0, { fam = "c", sym = "sus4" }).essential, { 1, 2, 3 }, "a sus chord may not")
+end
+
+-- The scale under a chord bends to meet it: the scale note on the same
+-- letter moves the semitone.
+do
+  local function under(key, degree, spec)
+    local ch = T.chord(key, degree, spec)
+    local k = T.chordKey(key, ch)
+    local names = {}
+    for d = 0, 6 do names[#names + 1] = T.noteName(k, d) end
+    return table.concat(names, " ")
+  end
+  local Cm = T.key(1, 2)
+  eq(under(Cm, 0, { fam = "c", sym = "maj" }), "C D E F G Ab Bb", "a borrowed C major turns C minor's Eb into E")
+  eq(under(Cm, 4, { fam = "c", sym = "7" }), "C D Eb F G Ab B", "G7 in C minor brings its leading tone, B")
+  eq(under(Cmaj, 1, { fam = "c", sym = "7" }), "C D E F# G A B", "D7 in C major brings F#")
+  eq(under(Cmaj, 3, { fam = "c", sym = "m" }), "C D E F G Ab B", "a borrowed iv in C major brings Ab")
+  eq(under(Cmaj, 4, { fam = "d", name = "7th" }), "C D E F G A B", "a diatonic chord leaves the scale alone")
+  eq(under(T.key(1, 10), 0, { fam = "c", sym = "m" }), "C D E G A C D",
+     "a pentatonic scale is not bent - it has no letter for every note")
+  -- Positions still count the same, so a third above is still +2.
+  local ch = T.chord(Cmaj, 1, { fam = "c", sym = "7" })
+  local k = T.chordKey(Cmaj, ch)
+  eq(T.pitch(k, 36 + 2) % 12, 6, "a third above D, under D7, is F#")
+  eq(T.pitch(k, 36 + 1), T.pitch(Cmaj, 36 + 1), "and the notes it did not bend are where they were")
+end
+
+-- Chains: by name, read back, named.
+do
+  local chain = T.parseChain("0:d:Triad,4:c:7,9:d:Triad,5:c:nope,3:c:maj7,2:x:7", Cmaj)
+  eq(T.chainString(chain), "0:d:Triad,4:c:7,3:c:maj7", "links that mean nothing here are dropped")
+  eq(T.chainName(Cmaj, chain), "I-V7-IVmaj7", "named as they read")
+  eq(#T.parseChain(("0:d:Triad,"):rep(12), Cmaj), T.MAX_CHAIN, "no more than eight chords")
+  eq(#T.parseChain("6:d:Triad", T.key(1, 10)), 0, "a seventh degree in a pentatonic scale is dropped")
+  eq(T.linkLabel(Cmaj, { degree = 6, fam = "d", name = "Triad" }), "vii\u{00B0}", "the diatonic vii is diminished")
+  eq(T.linkLabel(Cmaj, { degree = 1, fam = "c", name = "m7" }), "IIm7", "a chosen chord: upper-case numeral and symbol")
+  eq(T.linkLabel(Cmaj, { degree = 0, fam = "c", name = "Tristan" }), "I Tristan", "a named chord gets a space")
+  local name, notes = T.linkSpelling(Cmaj, { degree = 1, fam = "d", name = "7th" })
+  eq(name .. ": " .. notes, "Dm7: D F A C", "ii7 in C is spelled and named")
+  name, notes = T.linkSpelling(T.key(1, 2), { degree = 4, fam = "c", name = "7" })
+  eq(name .. ": " .. notes, "G7: G B D F", "G7 in C minor is spelled with B natural")
+  eq(T.symbolOf({ 7, 11, 2, 5 }, 7), "7", "G B D F is a 7")
+  eq(T.symbolOf({ 0, 4, 7 }, 0), "", "a major triad needs no symbol")
+end
+
+------------------------------------------------------------------------------
 -- Voice leading
 ------------------------------------------------------------------------------
 

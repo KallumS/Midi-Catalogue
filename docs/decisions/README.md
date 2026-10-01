@@ -19,3 +19,5 @@ the standing rules; this holds the decisions behind them.
 | [0006](0006-transformations-keep-the-harmony.md) | Transformations keep the harmony |
 | [0007](0007-density-filters-the-catalogue.md) | Density filters the catalogue rather than changing the generators |
 | [0008](0008-an-instrument-is-range-speed-leap-breath-hands.md) | What makes a line idiomatic: range, where it sounds best, speed at tempo, leap, breath, hands |
+| [0009](0009-chords-are-a-chain-of-any-chord.md) | Chords are a chain of any chord, and the scale bends to each |
+| [0010](0010-show-a-family-at-a-time.md) | Instruments and chords show a family at a time |

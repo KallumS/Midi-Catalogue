@@ -122,6 +122,23 @@ local function checkEntry(ctx, ty, e)
         end
       end
     end
+    -- Under a chord that brings a note the scale lacks, the scale note it
+    -- replaces never sounds against it: no Eb under a borrowed C major.
+    for _, n in ipairs(notes) do
+      local slot = C.slotAt(ctx, n.start)
+      -- The pedal is under the chords on purpose, and an anticipation plays
+      -- the next chord early on purpose.
+      if slot.key ~= ctx.key and ty ~= "Pedal" and not e.id:find("^anticip") then
+        local pc = n.pitch % 12
+        local inBase, inBent = false, false
+        for d = 0, ctx.n - 1 do
+          if T.pc(ctx.key, d) == pc then inBase = true end
+          if T.pc(slot.key, d) == pc then inBent = true end
+        end
+        expect(not (inBase and not inBent and not T.hasPc(slot.chord, pc)),
+               "nothing clashes with a borrowed chord's own notes", w .. " at " .. n.start)
+      end
+    end
     if ty == "Triadic" or ty == "Arpeggiated" or ty == "Contrary motion" then
       for _, n in ipairs(notes) do
         expect(n.ct, "block harmony is made of chord tones", w .. " at " .. n.start)
@@ -205,16 +222,20 @@ local CONTEXTS = {
   { root = 16, scale = 8, prog = "I-IV", bpm = 180, register = "High", colour = "seventh", note = "Bb Mixolydian, fast, high, sevenths" },
   { root = 1, scale = 14, prog = "I-V", note = "whole tone" },
   { root = 1, scale = 16, prog = "I-IV", note = "half-whole diminished" },
+  { root = 1, scale = 2, chain = "0:c:maj,3:d:Triad,4:c:7,0:d:Triad", note = "C minor, borrowed I and V7", timp = true },
+  { root = 1, scale = 1, chain = "0:d:7th,1:c:7,1:d:7th,4:c:7alt", note = "C major, II7 and an altered V" },
+  { root = 4, scale = 5, chain = "0:c:Tristan,3:c:So What,6:c:sus4", note = "D Dorian, named chords" },
+  { root = 8, scale = 1, chain = "0:d:9th,5:c:m(add9),3:c:5", bars = 2, note = "F major, add9 and a power chord" },
 }
 for _, o in ipairs(CONTEXTS) do
   for _, id in ipairs({ "pno", "vln1", "tuba", "cl", o.timp and "timp" or nil }) do
-    local ctx = C.context({ root = o.root, scale = o.scale, prog = o.prog, inst = id, bars = o.bars or 4,
+    local ctx = C.context({ root = o.root, scale = o.scale, prog = o.prog, chain = o.chain, inst = id, bars = o.bars or 4,
                             barBeats = o.barBeats or 4, bpm = o.bpm or 120, register = o.register,
                             colour = o.colour })
     for _, ty in ipairs(TYPES) do checkCatalogue(ctx, ty) end
   end
   for _, ens in ipairs({ "strings", "horns" }) do
-    local ctx = C.context({ root = o.root, scale = o.scale, prog = o.prog, inst = "pno", ensemble = ens,
+    local ctx = C.context({ root = o.root, scale = o.scale, prog = o.prog, chain = o.chain, inst = "pno", ensemble = ens,
                             bars = o.bars or 4, barBeats = o.barBeats or 4, bpm = o.bpm or 120,
                             register = o.register, colour = o.colour })
     for _, ty in ipairs(C.CATEGORIES[3].types) do checkCatalogue(ctx, ty) end
@@ -421,6 +442,27 @@ do
   eq(bars[1], bars[2], "bar 3 is bar 1")
 end
 
+-- A borrowed chord is played with its own notes: a C major chord in C minor
+-- has E natural in its arpeggio, its ostinato and its melody, and no Eb.
+do
+  local ctx = C.context({ root = 1, scale = 2, chain = "0:c:maj", inst = "pno", bars = 1 })
+  for _, case in ipairs({ { "Arpeggio", "Up@1/8@1" }, { "Ostinato", "1-3-5-3@1/8" } }) do
+    local pcs = {}
+    for _, n in ipairs(entry(ctx, case[1], case[2]).parts[1].notes) do pcs[n.pitch % 12] = true end
+    ok(pcs[4] and not pcs[3], case[1] .. " over a borrowed C major in C minor plays E, not Eb")
+  end
+  local vln = C.context({ root = 1, scale = 2, chain = "0:c:maj,4:c:7", inst = "vln1", bars = 4 })
+  local sawE, sawB = false, false
+  for _, e in ipairs(C.catalogue(vln, "Arch").entries) do
+    for _, n in ipairs(e.parts[1].notes) do
+      if n.start < 8 and n.pitch % 12 == 4 then sawE = true end
+      if n.start >= 8 and n.pitch % 12 == 11 then sawB = true end
+    end
+  end
+  ok(sawE, "the violin's arches use E natural over the borrowed C major")
+  ok(sawB, "and B natural, the leading tone, over G7")
+end
+
 -- The timpani avoid what they cannot play, and say why.
 do
   local ctx = C.context({ inst = "timp", prog = "I-V-vi-IV" })
@@ -541,20 +583,23 @@ end
 ------------------------------------------------------------------------------
 
 do
-  local st = C.clampState({ root = 99, scale = 0, prog = "nope", bars = 3, inst = "kazoo", section = "choir",
+  local st = C.clampState({ root = 99, scale = 0, chain = "nope", bars = 3, inst = "kazoo", section = "choir",
     register = "Up", cat = "Poems", type = "Haiku", transform = "Twist", repeats = 9, velocity = "Loud",
     density = "Thick" })
   eq(st.root, #T.ROOTS, "a root past the end comes back to the last")
   eq(st.scale, 1, "a scale before the start comes back to the first")
-  eq(st.prog, "I", "an unknown progression falls back to the first this scale has")
+  eq(st.chain, "0:d:Triad,4:d:Triad,5:d:Triad,3:d:Triad", "a chain that means nothing starts again from I-V-vi-IV")
   eq(st.bars, 2, "three bars snaps to the nearest length on offer")
   eq(st.inst, "pno", "an unknown instrument is the piano")
   eq(st.section, "", "an unknown section is none")
   eq(st.cat, "Rhythm", "an unknown category is the first")
   eq(st.type, "Ostinato", "and its first type")
   eq(st.repeats, 1, "an unknown repeat count is one")
-  local s2 = C.clampState({ root = 1, scale = 10, prog = "I-V-vi-IV", section = "strings", cat = "Melody", type = "Arch" })
-  eq(s2.prog, "I", "a progression the pentatonic scale lacks is replaced")
+  local s2 = C.clampState({ root = 1, scale = 10, chain = "0:d:Triad,6:c:7,3:c:maj7", section = "strings",
+                             cat = "Melody", type = "Arch" })
+  eq(s2.chain, "0:d:Triad,3:c:maj7", "a chord on a degree the pentatonic scale lacks is dropped, the rest kept")
+  local s3 = C.clampState({ root = 1, scale = 10, chain = "6:d:Triad" })
+  eq(s3.chain, "0:d:Triad", "and if none is left, the first progression that fits: I")
   eq(s2.cat, "Harmony", "a section always means harmony")
 end
 

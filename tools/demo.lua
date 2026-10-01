@@ -5,6 +5,8 @@
        lua5.4 tools/demo.lua Ostinato vc 1 2 i-VI-III-VII
                                                     one type, an instrument, root and
                                                     scale indices, a progression id
+       lua5.4 tools/demo.lua Arch vln1 1 2 0:c:maj,3:d:Triad,4:c:7,0:d:Triad
+                                                    or a chain of chords
 ]]
 
 local HERE = (arg and arg[0] or ""):match("^(.*)[/\\]") or "."
@@ -15,8 +17,11 @@ local C = dofile(R .. "mc_catalogue.lua").init(T, O)
 
 local only, inst = arg[1], arg[2] or "pno"
 local ens = O.ensembleById(inst)
+-- arg[5] is a progression id ("ii-V-I") or a chain ("0:c:maj,4:c:7").
+local chain = arg[5] and arg[5]:find(":") and arg[5] or nil
 local ctx = C.context({ root = tonumber(arg[3]) or 1, scale = tonumber(arg[4]) or 1,
-                        prog = arg[5] or "I-V-vi-IV", inst = ens and "pno" or inst,
+                        prog = (not chain) and arg[5] or "I-V-vi-IV", chain = chain,
+                        inst = ens and "pno" or inst,
                         ensemble = ens and inst or nil, bars = tonumber(arg[6]) or 4 })
 
 local function show(entry)
@@ -33,7 +38,7 @@ local function show(entry)
 end
 
 print(("%s %s   %s   %s"):format(T.ROOTS[ctx.key.root].name, T.SCALES[ctx.key.scale].name,
-  T.progressionName(ctx.key, ctx.prog), ens and ens.name or ctx.inst.name))
+  T.chainName(ctx.key, ctx.chain), ens and ens.name or ctx.inst.name))
 for _, cat in ipairs(C.CATEGORIES) do
   for _, ty in ipairs(cat.types) do
     if not only or only == ty then

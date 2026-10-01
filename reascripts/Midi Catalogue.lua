@@ -120,6 +120,9 @@ local ui = {
   loop = false, status = "", warn = false,
   ctx = nil, list = nil, shown = {}, entry = nil, block = nil,
   dirty = true, playhead = nil,
+  edit = nil,        -- which chord of the chain is open for changing, if any
+  chordFam = nil,    -- which family of chords the editor is showing
+  instFam = nil,     -- which family of instruments step 3 is showing
 }
 
 local ctx
@@ -153,7 +156,7 @@ end
 -- Settings that outlive the window
 ------------------------------------------------------------------------------
 
-local SAVED = { "root", "scale", "prog", "colour", "bars", "inst", "section", "register",
+local SAVED = { "root", "scale", "chain", "bars", "inst", "section", "register",
                 "cat", "type", "entry", "transform", "repeats", "velocity", "density" }
 
 local function saveState()
@@ -175,7 +178,7 @@ local function loadState()
   end
   -- Ids that look like numbers come back as numbers; the ones kept as names
   -- are turned back into strings before anything compares them.
-  for _, k in ipairs({ "prog", "inst", "section", "entry", "type", "cat" }) do
+  for _, k in ipairs({ "chain", "inst", "section", "entry", "type", "cat" }) do
     if st[k] ~= nil then st[k] = tostring(st[k]) end
   end
   C.clampState(st)
@@ -317,64 +320,161 @@ local function drawScale()
   stepGap()
 end
 
-local function drawChords()
-  heading(2, "Chords underneath")
-  local key = T.key(st.root, st.scale)
-  local progs = T.progressionsFor(key)
-  local p = flow("prog", progs, function(x) return x.id == st.prog end,
-                 function(x) return T.progressionName(key, x) end,
-                 function(x)
-                   local per = st.bars / #x.degrees
-                   local each
-                   if #x.degrees == 1 then each = "for the whole block"
-                   elseif per >= 1 then each = ("every %g bar%s"):format(per, per == 1 and "" or "s")
-                   else each = ("every %g beats"):format(per * (ui.ctx and ui.ctx.barBeats or 4)) end
-                   return ("One chord %s. Everything in the catalogue is written over these."):format(each)
-                 end, 60)
-  if p then st.prog = progs[p].id; touched() end
+-- Step 2: the chain of chords. Closed, it is one row - the chords as buttons,
+-- add, remove, and the length - so the window stays small. Clicking a chord
+-- opens the editor for it underneath: its root (a degree of the scale), the
+-- family, the chord, and the progressions to start again from. Clicking the
+-- same chord again, or Done, closes it.
+local function chain()
+  return T.parseChain(st.chain, T.key(st.root, st.scale))
+end
 
-  local c = flow("colour", C.COLOURS, function(x) return x.id == st.colour end,
-                 function(x) return x.name end,
-                 function(x) return x.id == "seventh" and "Chords with their sevenths: richer, jazzier"
-                                                       or "Plain three-note chords" end, 84)
-  if c then st.colour = C.COLOURS[c].id; touched() end
+local function setChain(list)
+  st.chain = T.chainString(list)
+  touched()
+end
+
+local function linkFamily(link)
+  if link.fam == "d" then return 1 end
+  local c = T.chordBySym(link.name)
+  return c and c.fam or 1
+end
+
+local function drawChordEditor(key, list)
+  local link = list[ui.edit]
+  local name, notes = T.linkSpelling(key, link)
+  dim(("Chord %d:  %s   -   %s"):format(ui.edit, name, notes))
+
+  local d = flow("deg", (function() local o = {}; for i = 0, T.scaleLen(key) - 1 do o[#o + 1] = i end; return o end)(),
+                 function(x) return x == link.degree end,
+                 function(x) return T.degreeNumeral(key, x) end,
+                 function(x) return T.degreeTitle(key, x) .. "  -  " .. T.noteName(key, x) end, 52)
+  if d then link.degree = d - 1; setChain(list) end
+
+  ui.chordFam = ui.chordFam or linkFamily(link)
+  local f = flow("cfam", T.FAMILIES, function(_, i) return i == ui.chordFam end, nil, nil, 92)
+  if f then ui.chordFam = f end
+
+  if ui.chordFam == 1 then
+    local c = flow("dia", T.DIATONIC, function(x) return link.fam == "d" and link.name == x.name end,
+                   function(x) return x.name end,
+                   function(x)
+                     local n, sp = T.linkSpelling(key, { degree = link.degree, fam = "d", name = x.name })
+                     return ("%s: %s - built from the scale, so always in key"):format(n, sp)
+                   end, 60)
+    if c then link.fam, link.name = "d", T.DIATONIC[c].name; setChain(list) end
+  else
+    local fam = {}
+    for _, ch in ipairs(T.CHORDS) do if ch.fam == ui.chordFam then fam[#fam + 1] = ch end end
+    local c = flow("chords", fam, function(x) return link.fam == "c" and link.name == x.sym end,
+                   function(x) return x.sym end,
+                   function(x)
+                     local n, sp = T.linkSpelling(key, { degree = link.degree, fam = "c", name = x.sym })
+                     return ("%s (%s): %s"):format(n, x.name, sp)
+                   end, 60)
+    if c then link.fam, link.name = "c", fam[c].sym; setChain(list) end
+  end
+
+  dim("Start again from")
+  ImGui.SameLine(ctx)
+  local progs = T.progressionsFor(key)
+  local p = flow("prog", progs, function() return false end,
+                 function(x) return T.progressionName(key, x) end,
+                 function() return "Replaces the chords above with this progression, as triads" end, 60)
+  if p then setChain(T.presetChain(progs[p])); ui.edit = nil end
+  ImGui.SameLine(ctx, 0, 16)
+  if pick("Done", false, 60) then ui.edit = nil end
+end
+
+local function drawChords()
+  heading(2, "Chords")
+  local key = T.key(st.root, st.scale)
+  local list = chain()
+  if ui.edit and ui.edit > #list then ui.edit = nil end
+
+  local per = st.bars / #list
+  local each = (per >= 1) and ("%g bar%s each"):format(per, per == 1 and "" or "s")
+               or ("%g beats each"):format(per * (ui.ctx and ui.ctx.barBeats or 4))
+  local c = flow("chain", list, function(_, i) return ui.edit == i end,
+                 function(x) return T.linkLabel(key, x) end,
+                 function(x)
+                   local n, sp = T.linkSpelling(key, x)
+                   return ("%s: %s   (%s)\nClick to change it."):format(n, sp, each)
+                 end, 44)
+  if c then
+    if ui.edit == c then ui.edit = nil else ui.edit, ui.chordFam = c, nil end
+  end
+  if #list < T.MAX_CHAIN then
+    ImGui.SameLine(ctx)
+    if pick("+", false, 28) then
+      local copy = list[ui.edit or #list]
+      list[#list + 1] = { degree = copy.degree, fam = copy.fam, name = copy.name }
+      setChain(list)
+      ui.edit, ui.chordFam = #list, nil
+    end
+    tip("Add a chord at the end")
+  end
+  if #list > 1 then
+    ImGui.SameLine(ctx)
+    if pick("-", false, 28) then
+      table.remove(list, ui.edit or #list)
+      setChain(list)
+      ui.edit = nil
+    end
+    tip(ui.edit and ("Remove chord " .. ui.edit) or "Remove the last chord")
+  end
   ImGui.SameLine(ctx, 0, 24)
   dim("Bars")
   ImGui.SameLine(ctx)
-  local b = flow("bars", C.LENGTHS, function(x) return x == st.bars end, nil, nil, 36)
+  local b = flow("bars", C.LENGTHS, function(x) return x == st.bars end, nil,
+                 function() return "How long the idea lasts; the chords share it evenly" end, 36)
   if b then st.bars = C.LENGTHS[b]; touched() end
+
+  if ui.edit then drawChordEditor(key, list) end
   stepGap()
 end
 
+-- Step 3: one row of families, then the instruments of the family showing.
+-- The family is only where you are looking: the instrument chosen stays
+-- chosen until another is clicked.
 local function drawInstrument()
   heading(3, "Instrument")
-  for _, fam in ipairs(O.FAMILIES) do
+  local fams = {}
+  for _, f in ipairs(O.FAMILIES) do fams[#fams + 1] = f end
+  fams[#fams + 1] = "Sections"
+  if not ui.instFam then
+    ui.instFam = (st.section ~= "") and "Sections" or O.byId(st.inst).family
+  end
+  local f = flow("instfam", fams, function(x) return x == ui.instFam end, nil, nil, 84)
+  if f then ui.instFam = fams[f] end
+  ImGui.SameLine(ctx, 0, 24)
+  dim("Register")
+  ImGui.SameLine(ctx)
+  local r = flow("register", O.REGISTERS, function(x) return x == st.register end, nil,
+                 function(x) return ({ Low = "The lower part of where it sounds best",
+                                       Middle = "The middle of where it sounds best",
+                                       High = "The upper part of where it sounds best" })[x] end, 60)
+  if r then st.register = O.REGISTERS[r]; touched() end
+
+  if ui.instFam == "Sections" then
+    local e = flow("sections", O.ENSEMBLES, function(x) return st.section == x.id end,
+                   function(x) return x.name end,
+                   function(x)
+                     local names = {}
+                     for _, part in ipairs(x.parts) do names[#names + 1] = part.name end
+                     return "Harmony spread one voice to each part, a track each: " .. table.concat(names, ", ")
+                   end, 88)
+    if e then st.section = O.ENSEMBLES[e].id; st.cat = "Harmony"; touched() end
+  else
     local list = {}
-    for _, inst in ipairs(O.INSTRUMENTS) do if inst.family == fam then list[#list + 1] = inst end end
-    dim(fam)
-    local i = flow("fam" .. fam, list, function(x) return st.section == "" and x.id == st.inst end,
+    for _, inst in ipairs(O.INSTRUMENTS) do if inst.family == ui.instFam then list[#list + 1] = inst end end
+    local i = flow("inst", list, function(x) return st.section == "" and x.id == st.inst end,
                    function(x) return x.name end,
                    function(x) return ("%s to %s, happiest %s to %s"):format(
                      T.pitchName(x.low), T.pitchName(x.high), T.pitchName(x.sweet[1]), T.pitchName(x.sweet[2])) end,
                    88)
     if i then st.inst = list[i].id; st.section = ""; touched() end
   end
-  dim("Sections - harmony spread one voice to each part, a track each")
-  local e = flow("sections", O.ENSEMBLES, function(x) return st.section == x.id end,
-                 function(x) return x.name end,
-                 function(x)
-                   local names = {}
-                   for _, part in ipairs(x.parts) do names[#names + 1] = part.name end
-                   return table.concat(names, ", ")
-                 end, 88)
-  if e then st.section = O.ENSEMBLES[e].id; st.cat = "Harmony"; touched() end
-
-  dim("Register")
-  local r = flow("register", O.REGISTERS, function(x) return x == st.register end, nil,
-                 function(x) return ({ Low = "The lower part of where it sounds best",
-                                       Middle = "The middle of where it sounds best",
-                                       High = "The upper part of where it sounds best" })[x] end, 72)
-  if r then st.register = O.REGISTERS[r]; touched() end
   stepGap()
 end
 
