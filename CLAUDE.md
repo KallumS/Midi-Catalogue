@@ -222,7 +222,7 @@ tools/test.sh
 | | |
 | --- | --- |
 | `test_theory.lua` | Scales against ScaleView, positions, spelling, the chord tables, chord scales, chains, and every progression in every seven-note scale voiced and audited. |
-| `test_catalogue.lua` | Every entry for every instrument and section, in eleven other settings, checked rule by rule; then particular things by name. |
+| `test_catalogue.lua` | Every entry for every instrument and section, then in fifteen other settings (four of them chains with borrowed, altered and named chords), checked rule by rule; then particular things by name. |
 | `test_midi.lua` | The writer, read back by a parser that is not itself, format 0 and 1. |
 | `test_place.lua` | Insert, sections on new tracks, export, audition, against the mocked REAPER. |
 | `test_ui.lua` | The real script against a mocked ReaImGui: clicks every button in every category, every chord in every family, builds and trims the chain, inserts, exports, auditions, reloads saved and nonsense settings. |
@@ -243,6 +243,15 @@ by name that a borrowed C major in C minor is played with E natural.
 `docs/CATALOGUE.md` is generated; `tools/test.sh` fails when it is stale:
 `lua5.4 tools/catalogue_md.lua > docs/CATALOGUE.md`. A fresh container has no
 Lua: `apt-get install -y lua5.4` (or `tools/run_lua.py` runs through lupa).
+
+## Where it stands
+
+Version 1.1 (`index.xml`). Everything is on the branch
+`claude/midi-catalogue-plugin-054jz8`; nothing is merged into `main` yet, so
+the ReaPack link in the README does not resolve until it is. Version 1.0 was
+tried in REAPER by the user ("GUI works well but is very busy"); 1.1's window
+(chord chain, instrument families) has only been run against the mocks. The
+latest session log says what is open.
 
 ## Releasing
 
