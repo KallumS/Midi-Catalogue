@@ -42,6 +42,15 @@
         <source file="mc_midi.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/0c62f386a5d2b7521b54bebaeb58f621790f2a41/reascripts/mc_midi.lua</source>
         <source file="mc_place.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/0c62f386a5d2b7521b54bebaeb58f621790f2a41/reascripts/mc_place.lua</source>
       </version>
+      <version name="1.1.1" author="kallums" time="2026-10-14T12:00:00Z">
+        <changelog><![CDATA[Wording in the window follows Apple's writing guidelines: buttons such as Insert at Cursor and Export MIDI File, clearer messages that say what to do, and the reasons an idea was left out reading plainly.]]></changelog>
+        <source main="main" file="Midi Catalogue.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/ea18620efd04f1ead6b2209e885dbc766fecdf39/reascripts/Midi%20Catalogue.lua</source>
+        <source file="mc_theory.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/ea18620efd04f1ead6b2209e885dbc766fecdf39/reascripts/mc_theory.lua</source>
+        <source file="mc_orchestra.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/ea18620efd04f1ead6b2209e885dbc766fecdf39/reascripts/mc_orchestra.lua</source>
+        <source file="mc_catalogue.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/ea18620efd04f1ead6b2209e885dbc766fecdf39/reascripts/mc_catalogue.lua</source>
+        <source file="mc_midi.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/ea18620efd04f1ead6b2209e885dbc766fecdf39/reascripts/mc_midi.lua</source>
+        <source file="mc_place.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/ea18620efd04f1ead6b2209e885dbc766fecdf39/reascripts/mc_place.lua</source>
+      </version>
     </reapack>
 
   </category>
