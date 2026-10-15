@@ -14,7 +14,7 @@
  *                 Needs ReaImGui, from the ReaTeam Extensions repository.
  * Author:         Kallum Shah
  * Links:          https://github.com/KallumS/Midi-Catalogue
- * Version:        1.1
+ * Version:        1.1.1
  * Provides:
  *   mc_theory.lua
  *   mc_orchestra.lua
@@ -34,8 +34,9 @@ local imgui_path = reaper.ImGui_GetBuiltinPath and
                    (reaper.ImGui_GetBuiltinPath() .. "/imgui.lua")
 if not imgui_path then
   reaper.MB("Midi Catalogue needs the ReaImGui extension.\n\n" ..
-            "Install it with ReaPack, from the ReaTeam Extensions repository.",
-            "Missing dependency", 0)
+            "Install ReaImGui with ReaPack, from the ReaTeam Extensions repository, " ..
+            "then run Midi Catalogue again.",
+            "ReaImGui Is Missing", 0)
   return
 end
 local ImGui = dofile(imgui_path)("0.9")
@@ -343,12 +344,12 @@ end
 local function drawChordEditor(key, list)
   local link = list[ui.edit]
   local name, notes = T.linkSpelling(key, link)
-  dim(("Chord %d:  %s   -   %s"):format(ui.edit, name, notes))
+  dim(("Chord %d:  %s — %s"):format(ui.edit, name, notes))
 
   local d = flow("deg", (function() local o = {}; for i = 0, T.scaleLen(key) - 1 do o[#o + 1] = i end; return o end)(),
                  function(x) return x == link.degree end,
                  function(x) return T.degreeNumeral(key, x) end,
-                 function(x) return T.degreeTitle(key, x) .. "  -  " .. T.noteName(key, x) end, 52)
+                 function(x) return T.degreeTitle(key, x) .. " — " .. T.noteName(key, x) end, 52)
   if d then link.degree = d - 1; setChain(list) end
 
   ui.chordFam = ui.chordFam or linkFamily(link)
@@ -360,7 +361,7 @@ local function drawChordEditor(key, list)
                    function(x) return x.name end,
                    function(x)
                      local n, sp = T.linkSpelling(key, { degree = link.degree, fam = "d", name = x.name })
-                     return ("%s: %s - built from the scale, so always in key"):format(n, sp)
+                     return ("%s: %s — built from the scale, so always in key"):format(n, sp)
                    end, 60)
     if c then link.fam, link.name = "d", T.DIATONIC[c].name; setChain(list) end
   else
@@ -375,12 +376,12 @@ local function drawChordEditor(key, list)
     if c then link.fam, link.name = "c", fam[c].sym; setChain(list) end
   end
 
-  dim("Start again from")
+  dim("Start Again From")
   ImGui.SameLine(ctx)
   local progs = T.progressionsFor(key)
   local p = flow("prog", progs, function() return false end,
                  function(x) return T.progressionName(key, x) end,
-                 function() return "Replaces the chords above with this progression, as triads" end, 60)
+                 function() return "Replace the chords above with this progression, as triads" end, 60)
   if p then setChain(T.presetChain(progs[p])); ui.edit = nil end
   ImGui.SameLine(ctx, 0, 16)
   if pick("Done", false, 60) then ui.edit = nil end
@@ -416,7 +417,7 @@ local function drawChords()
   end
   if #list > 1 then
     ImGui.SameLine(ctx)
-    if pick("-", false, 28) then
+    if pick("−", false, 28) then
       table.remove(list, ui.edit or #list)
       setChain(list)
       ui.edit = nil
@@ -445,7 +446,10 @@ local function drawInstrument()
   if not ui.instFam then
     ui.instFam = (st.section ~= "") and "Sections" or O.byId(st.inst).family
   end
-  local f = flow("instfam", fams, function(x) return x == ui.instFam end, nil, nil, 84)
+  -- "Keys & Harp" is the family's name in the data; the window spells out the
+  -- "and", as Apple's writing guidelines prefer.
+  local f = flow("instfam", fams, function(x) return x == ui.instFam end,
+                 function(x) return (x:gsub(" & ", " and ")) end, nil, 84)
   if f then ui.instFam = fams[f] end
   ImGui.SameLine(ctx, 0, 24)
   dim("Register")
@@ -470,7 +474,7 @@ local function drawInstrument()
     for _, inst in ipairs(O.INSTRUMENTS) do if inst.family == ui.instFam then list[#list + 1] = inst end end
     local i = flow("inst", list, function(x) return st.section == "" and x.id == st.inst end,
                    function(x) return x.name end,
-                   function(x) return ("%s to %s, happiest %s to %s"):format(
+                   function(x) return ("%s–%s, happiest %s–%s"):format(
                      T.pitchName(x.low), T.pitchName(x.high), T.pitchName(x.sweet[1]), T.pitchName(x.sweet[2])) end,
                    88)
     if i then st.inst = list[i].id; st.section = ""; touched() end
@@ -495,7 +499,7 @@ local function drawCatalogue()
   end
   local types
   for _, cc in ipairs(C.CATEGORIES) do if cc.name == st.cat then types = cc.types end end
-  local t = flow("type", types, function(x) return x == st.type end, nil, nil, 72)
+  local t = flow("type", types, function(x) return x == st.type end, C.label, nil, 72)
   if t then st.type = types[t]; touched() end
 
   ImGui.Dummy(ctx, 0, 4)
@@ -539,11 +543,11 @@ end
 
 local function drawShape()
   ImGui.Dummy(ctx, 0, 6)
-  heading(nil, "Shape it")
+  heading(nil, "Shape It")
   dim("Transform")
-  local t = flow("transform", C.TRANSFORMS, function(x) return x == st.transform end, nil,
+  local t = flow("transform", C.TRANSFORMS, function(x) return x == st.transform end, C.label,
                  function(x) return ({
-                   Original = "As it comes",
+                   Original = "As it comes.",
                    Inversion = "Upside down, in the scale. Notes that were on the chord stay on the chord.",
                    Retrograde = "Backwards. Notes that were on the chord land on the chord now under them.",
                    ["Retrograde inversion"] = "Backwards and upside down.",
@@ -555,16 +559,16 @@ local function drawShape()
   dim("Repeats")
   ImGui.SameLine(ctx)
   local r = flow("repeats", C.REPEATS, function(x) return x == st.repeats end,
-                 function(x) return "x" .. x end, nil, 40)
+                 function(x) return "×" .. x end, nil, 40)
   if r then st.repeats = C.REPEATS[r]; touched() end
   ImGui.SameLine(ctx, 0, 24)
   dim("Velocity")
   ImGui.SameLine(ctx)
   local v = flow("velocity", C.VELOCITIES, function(x) return x == st.velocity end, nil,
                  function(x) return x == "Accents" and
-                   ("Every note at 100, and the accented ones - the start of each group, the "
-                    .. "downbeats - at " .. C.ACCENT)
-                   or "Every note at 100" end, 80)
+                   ("Every note at 100, and the accented ones — the start of each group, the "
+                    .. "downbeats — at " .. C.ACCENT .. ".")
+                   or "Every note at 100." end, 80)
   if v then st.velocity = C.VELOCITIES[v]; touched() end
 end
 
@@ -591,24 +595,24 @@ local function drawActions()
   if not block then return end
 
   local many = #block.parts > 1
-  if pick(many and "Insert on new tracks" or "Insert at cursor", false, 170) then
+  if pick(many and "Insert on New Tracks" or "Insert at Cursor", false, 170) then
     local res = Place.insert(block)
     if res == Place.OK then say(many and ("Inserted " .. #block.parts .. " tracks at the edit cursor")
                                       or "Inserted at the edit cursor")
-    elseif res == Place.NOTHING then say("Nothing to insert", true)
-    else say("No track selected", true) end
+    elseif res == Place.NOTHING then say("There’s nothing to insert.", true)
+    else say("No track is selected. Select a track and try again.", true) end
   end
   tip(many and "One new track per instrument, named for it, under the selected track"
            or "On the selected track, at the edit cursor")
 
   ImGui.SameLine(ctx)
-  if pick("Export .mid", false, 120) then
+  if pick("Export MIDI File", false, 130) then
     local res, path = Place.export(block)
-    if res == Place.OK then say("Wrote " .. tostring(path))
-    elseif res == Place.NOTHING then say("Nothing to write", true)
-    else say("Could not write the file", true) end
+    if res == Place.OK then say("Saved " .. tostring(path))
+    elseif res == Place.NOTHING then say("There’s nothing to export.", true)
+    else say("The MIDI file couldn’t be written. Check that REAPER’s resource folder can be written to.", true) end
   end
-  tip("Into the Midi Catalogue folder in REAPER's resource path" ..
+  tip("Saves a .mid file in the Midi Catalogue folder in REAPER’s resource path" ..
       (many and ", one track per instrument" or ""))
 
   ImGui.SameLine(ctx, 0, 16)
@@ -616,8 +620,8 @@ local function drawActions()
     if Place.previewRunning() then Place.previewStop()
     else Place.previewStart(block, Place.tempo()) end
   end
-  tip("Plays through the virtual keyboard, so a record-armed monitored track " ..
-      "will sound it. Timing is a preview, not a performance.")
+  tip("Plays through the virtual keyboard, so a record-armed, monitored track " ..
+      "will sound it. The timing is a preview, not a performance.")
 
   ImGui.SameLine(ctx)
   local _

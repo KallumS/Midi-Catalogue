@@ -49,12 +49,12 @@ chords, the instrument or the tempo.
 ## What is in it
 
 **Rhythm** - Ostinato, Pulse, Syncopation, Gallop, Tresillo, Hemiola,
-Polyrhythm, Arpeggio, Repeated note, Alberti, Broken chord.
+Polyrhythm, Arpeggio, Repeated Note, Alberti, Broken Chord.
 
-**Melody** - Ascending, Descending, Arch, Wave, Sequence, Call/response,
+**Melody** - Ascending, Descending, Arch, Wave, Sequence, Call and Response,
 Repetition, Development.
 
-**Harmony** - Triadic, Quartal, Cluster, Pedal, Arpeggiated, Contrary motion.
+**Harmony** - Triadic, Quartal, Cluster, Pedal, Arpeggiated, Contrary Motion.
 
 The whole list, entry by entry, is in [docs/CATALOGUE.md](docs/CATALOGUE.md),
 along with all 87 chords and every instrument's range and limits.
@@ -128,7 +128,7 @@ The window is four numbered steps, top to bottom.
    7th, 9th, 11th, 13th, 6th, sus2, sus4, 5th), Triads, 6ths & 7ths,
    Extended, Altered, Sus & Add, Quartal and Named (Tristan, So What,
    Petrushka...) - and every chord in the family you pick. **+** adds a chord
-   (up to eight), **-** removes one, and "Start again from" replaces the whole
+   (up to eight), **−** removes one, and **Start Again From** replaces the whole
    chain with a common progression. Click the chord again, or Done, to close
    it. Next to the chain, how many bars the idea lasts; the chords share them
    evenly.
@@ -138,7 +138,7 @@ The window is four numbered steps, top to bottom.
    chord's own notes (E natural, F#) for as long as it lasts, the way a
    player would, instead of clashing with it.
 3. **Instrument.** One row of families - Strings, Woodwind, Brass,
-   Percussion, Keys & Harp, Sections - and under it the instruments of the
+   Percussion, Keys and Harp, Sections - and under it the instruments of the
    family you are looking at. Looking at another family does not change your
    instrument; clicking one does. Next to the families, the register - low,
    middle or high within where that instrument sounds best. Hover over an
@@ -148,7 +148,7 @@ The window is four numbered steps, top to bottom.
    Hover over an entry for a sentence saying exactly what it is. The
    **Density** buttons narrow the list to sparse, medium or busy ideas.
 
-Then **Shape it**:
+Then **Shape It**:
 
 - **Transform** - inversion (upside down), retrograde (backwards), both, or
   twice as slow or twice as fast. The harmony is kept: a note that was on the
@@ -159,10 +159,10 @@ Then **Shape it**:
 
 And get it out:
 
-- **Insert at cursor** puts it on the selected track at the edit cursor, as one
-  MIDI item named after what it is. A section inserts **on new tracks**, one per
-  instrument, under the selected track.
-- **Export .mid** writes a MIDI file into a `Midi Catalogue` folder in REAPER's
+- **Insert at Cursor** puts it on the selected track at the edit cursor, as one
+  MIDI item named after what it is. For a section the button is **Insert on New
+  Tracks**: one track per instrument, under the selected track.
+- **Export MIDI File** writes a MIDI file into a `Midi Catalogue` folder in REAPER's
   resource path. Point the Media Explorer at it and everything you export is
   one drag away. A section's file has a track per instrument.
 - **Audition** plays it through the virtual keyboard, so a record-armed track

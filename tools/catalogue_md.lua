@@ -37,7 +37,7 @@ w("harmony only.")
 w()
 local head = { "| |" }
 local rule = { "| --- |" }
-for _, t in ipairs(types) do head[#head + 1] = " " .. t .. " |"; rule[#rule + 1] = " ---: |" end
+for _, t in ipairs(types) do head[#head + 1] = " " .. C.label(t) .. " |"; rule[#rule + 1] = " ---: |" end
 w(table.concat(head)); w(table.concat(rule))
 local function row(name, ctx)
   local cells = { "| " .. name .. " |" }
@@ -70,13 +70,13 @@ for _, cat in ipairs(C.CATEGORIES) do
   w()
   for _, t in ipairs(cat.types) do
     local r = C.catalogue(pno, t)
-    w("### " .. t)
+    w("### " .. C.label(t))
     w()
     w(("%d entries on the piano, %d on Violin I, %d on the tuba."):format(#r.entries,
       #C.catalogue(vln, t).entries, #C.catalogue(tuba, t).entries))
     w()
     for _, e in ipairs(r.entries) do
-      w(("- **%s** (%s) - %s"):format(e.label, e.band:lower(), e.hint))
+      w(("- **%s** (%s) — %s"):format(e.label, e.band:lower(), e.hint))
     end
     local hidden = C.catalogue(tuba, t).hidden
     if #hidden > 0 then
