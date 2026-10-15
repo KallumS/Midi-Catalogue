@@ -120,6 +120,7 @@ function ImGui.DrawList_AddLine(_, x1, y1, x2, y2, col)
     if type(v) ~= "number" or v ~= v then error("line argument is " .. tostring(v)) end
   end
 end
+local HIG = dofile(HERE .. "/hig_mock.lua")(ImGui)
 setmetatable(ImGui, { __index = function(_, k)
   error("the script called ImGui." .. tostring(k) .. ", which the mock does not have")
 end })
@@ -476,5 +477,26 @@ start()
 local good, err = pcall(frame)
 ok(good, "a nonsense saved state still draws: " .. tostring(err))
 ok(#g.buttons > 50, "and draws everything")
+
+------------------------------------------------------------------------------
+-- Apple's Human Interface Guidelines (decision 0012)
+------------------------------------------------------------------------------
+
+HIG.check({
+  ok = ok, eq = eq, frame = function() frame() end,
+  loaded = function() fresh(); frame() end,
+  warned = function()
+    fresh()
+    P.selTracks = {}
+    click(count("Insert on New Tracks") > 0 and "Insert on New Tracks" or "Insert at Cursor")
+    return "No track is selected."
+  end,
+  dismiss = function() click("Dismiss") end,
+  quit = function() atexitFn() end,
+  restart = function() start(); frame() end,
+  saved = function() return P.ext["MidiCatalogue:view"] end,
+  setSaved = function(v) P.ext["MidiCatalogue:view"] = v end,
+  sizeKey = "textSize",
+})
 
 C.done()

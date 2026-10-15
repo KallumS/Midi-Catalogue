@@ -195,6 +195,22 @@ curly quotes. **A saved value is never renamed; its label is** -
 a type or a transformation. Reasons for leaving an entry out read after their
 count ("3 outside the Tuba’s range").
 
+**The rest of Apple's HIG Foundations**
+([0012](docs/decisions/0012-apples-hig-foundations.md),
+[`docs/apple-hig-review.md`](docs/apple-hig-review.md), after Midi Suggester's
+0009 and Transient Shuffler): every line of text is **7:1** on the ground
+(secondary `#B0B6C0`, warnings `#FF9E96` - the house red and `#8A919C` are
+not for words); **View → Text Size** 100-200% (Cmd+= / Cmd+- / Cmd+0),
+saved as `textSize`, the system sans-serif at 13 points; controls **28
+points tall, 12 apart** (`pushSize`, before `Begin`, popped after `End` like
+the theme); **keyboard navigation** on, its ring `#F2F4F7`; a chosen button
+also carries an **ink bar** (not colour alone); the **message at the top**
+until *Dismiss*. Rules for new code: every fixed size goes through `px()`,
+every button through `pick()` (never narrower than its label), every text
+colour 7:1. `tests/hig_mock.lua` - the same file in every ReaImGui repo of
+the family - adds the calls to the mock and checks each of these per widget.
+The text size is `ui.textSize`, saved under its own ExtState key `view` (the engine clamps `st`). `flow()` measures each label in the current font and `pick()` measures it again, so a button can be too narrow only if both are broken - and the test then fails. `docs/COLOUR.md` gained `#B0B6C0`, `#FF9E96` and the focus ring.
+
 ## Colour
 
 The house scheme, unchanged: see `docs/COLOUR.md` (kept by hand). Every grey
@@ -258,7 +274,8 @@ Lua: `apt-get install -y lua5.4` (or `tools/run_lua.py` runs through lupa).
 
 ## Where it stands
 
-Version 1.1.1 (`index.xml`), on the branch `claude/adoring-feynman-bihxp2`;
+Version 1.2 (`index.xml`, Apple's HIG Foundations, 0012) on `ccr-f2d9adc9-lanc9o`, built on
+1.1.1 (the wording, on `claude/adoring-feynman-bihxp2`);
 1.1 is on `main`. Version 1.0 was
 tried in REAPER by the user ("GUI works well but is very busy"); 1.1's window
 (chord chain, instrument families) has only been run against the mocks. The

@@ -41,17 +41,21 @@ Eighteen greys, darkest to lightest.
 | `#3A404A` | 58 | 64 | 74 | separators, roll bar lines |
 | `#585F6B` | 88 | 95 | 107 | scrollbar grab |
 | `#6D7581` | 109 | 117 | 129 | scrollbar hover |
-| `#8A919C` | 138 | 145 | 156 | disabled and dim text |
+| `#8A919C` | 138 | 145 | 156 | disabled text (4.7:1 - not for words that must be read; see below) |
 | `#8F96A2` | 143 | 150 | 162 | button held |
 | `#A9AFBA` | 169 | 175 | 186 | buttons, slider grabs |
+| `#B0B6C0` | 176 | 182 | 192 | secondary text: hints, labels, the status line (7.4:1) |
 | `#BFC5CE` | 191 | 197 | 206 | the step numbers |
 | `#C0C6CF` | 192 | 198 | 207 | button hover |
 | `#DDE1E7` | 221 | 225 | 231 | body text |
-| `#F2F4F7` | 242 | 244 | 247 | the audition playhead |
+| `#F2F4F7` | 242 | 244 | 247 | the audition playhead, the keyboard's focus ring |
 
 ## One colour off the ramp
 
-`#D2483F` - red, for warnings in the status line. Deliberately not a shade of
+`#D2483F` - red, for warnings in the status line. **It
+marks; it does not letter.** At 3.4:1 on the ground it is too faint for
+words, so a warning's text is `#FF9E96` (7.6:1), the same red lightened, and
+`#D2483F` is kept for marks that are not text. Deliberately not a shade of
 the accent, so a warning can never read as a selection. It and the yellow are
 the only saturated colours in the scheme.
 
@@ -113,9 +117,11 @@ text colour; this one inverts that, so the habit is wrong here.
   --rule:          #3A404A;
   --ink:           #14171C;
   --text:          #DDE1E7;
-  --text-dim:      #8A919C;
+  --text-dim:      #B0B6C0;
+  --text-disabled: #8A919C;
   --roll:          #111419;
   --warn:          #D2483F;
+  --warn-text:     #FF9E96;
 }
 ```
 
@@ -132,6 +138,7 @@ rather than only the same scheme:
 | `Col_FrameBg` | `#1A1D23` |
 | `Col_FrameBgActive` | `#2A2F37` |
 | `Col_FrameBgHovered` | `#22262D` |
+| `Col_NavHighlight` | `#F2F4F7` |
 | `Col_PopupBg` | `#1B1F25` |
 | `Col_ScrollbarBg` | `#1A1D23` |
 | `Col_ScrollbarGrab` | `#585F6B` |
@@ -146,3 +153,14 @@ rather than only the same scheme:
 | `Col_TitleBgActive` | `#23272E` |
 | `Col_TitleBgCollapsed` | `#1B1F25` |
 | `Col_WindowBg` | `#23272E` |
+
+## Contrast, after Apple's guidelines
+
+Apple's Dark Mode page asks for 7:1 between small custom text and its ground
+(4.5:1 at the least). On `#23272E`: body text `#DDE1E7` 11.4:1, secondary
+`#B0B6C0` 7.4:1, step numbers `#BFC5CE` 8.6:1, warnings `#FF9E96` 7.6:1, and
+the ink `#14171C` 8.2:1 on a grey button and 15.4:1 on the yellow. The old
+dim `#8A919C` (4.7:1) and the house red (3.4:1) are kept for disabled text
+and for marks, never for words that must be read. The keyboard's focus ring is
+`#F2F4F7`, not the accent: yellow means *on*, and a focused control need not
+be.

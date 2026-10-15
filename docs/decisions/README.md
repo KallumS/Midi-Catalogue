@@ -22,3 +22,4 @@ the standing rules; this holds the decisions behind them.
 | [0009](0009-chords-are-a-chain-of-any-chord.md) | Chords are a chain of any chord, and the scale bends to each |
 | [0010](0010-show-a-family-at-a-time.md) | Instruments and chords show a family at a time |
 | [0011](0011-the-window-follows-apples-writing-guidelines.md) | The window's text follows Apple's writing guidelines |
+| [0012](0012-apples-hig-foundations.md) | Apple's HIG Foundations are the standard for the window |
