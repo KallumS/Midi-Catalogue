@@ -51,6 +51,15 @@
         <source file="mc_midi.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/ea18620efd04f1ead6b2209e885dbc766fecdf39/reascripts/mc_midi.lua</source>
         <source file="mc_place.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/ea18620efd04f1ead6b2209e885dbc766fecdf39/reascripts/mc_place.lua</source>
       </version>
+      <version name="1.2" author="kallums" time="2026-10-15T18:00:00Z">
+        <changelog><![CDATA[Follows Apple's design guidelines for Mac apps: View > Text Size makes everything up to twice the size (Cmd+= and Cmd+-), the keyboard alone can move round the window and click (Tab, arrows, Space), every word is easier to read against the dark background, buttons are the Mac's size with more room between them, a chosen button has a bar under its name as well as being yellow, and messages appear at the top until you dismiss them.]]></changelog>
+        <source main="main" file="Midi Catalogue.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/30670a6ee657c7046385fde8867d48cfdfaab885/reascripts/Midi%20Catalogue.lua</source>
+        <source file="mc_theory.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/30670a6ee657c7046385fde8867d48cfdfaab885/reascripts/mc_theory.lua</source>
+        <source file="mc_orchestra.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/30670a6ee657c7046385fde8867d48cfdfaab885/reascripts/mc_orchestra.lua</source>
+        <source file="mc_catalogue.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/30670a6ee657c7046385fde8867d48cfdfaab885/reascripts/mc_catalogue.lua</source>
+        <source file="mc_midi.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/30670a6ee657c7046385fde8867d48cfdfaab885/reascripts/mc_midi.lua</source>
+        <source file="mc_place.lua">https://raw.githubusercontent.com/KallumS/Midi-Catalogue/30670a6ee657c7046385fde8867d48cfdfaab885/reascripts/mc_place.lua</source>
+      </version>
     </reapack>
 
   </category>
