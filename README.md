@@ -113,7 +113,7 @@ restart REAPER.
 you). Actions -> Show action list -> New action -> Load ReaScript, and pick
 `Midi Catalogue.lua`. It is then in the action list, where you can run it, give
 it a shortcut or put it on a toolbar. Running it again closes the window;
-Escape closes it too.
+Esc closes it too (once nothing else is holding it - see below).
 
 ## Using it
 
@@ -201,8 +201,17 @@ The window follows Apple's design guidelines for Mac apps
   and **Cmd+0** goes back to 100%. It remembers your choice.
 - **The keyboard alone works.** Press **Tab** or an arrow key and a white
   ring appears round a control; Tab and the arrows move it, and **Space** or
-  **Return** clicks. **Esc** closes the window.
+  **Return** clicks. **Esc** lets go of the control the ring is on, or
+  closes an open menu or the chord editor; with none of those, it closes the
+  window.
 - **Messages appear at the top** and stay until you click **Dismiss**.
+  Replacing the chords with *Start Again From*, or taking one away with
+  **−**, puts an **Undo** beside the message that brings them back.
+- **While anything plays**, a **Stop** sits in the menu bar at the top, where
+  it can't scroll out of sight.
+- Rows wrap at the window's edge at any text size, long tooltips are broken
+  into lines, and the window can't be made too small to reach its buttons.
+  Its title names the idea showing.
 - A chosen button is yellow **and** has a dark bar under its name, so it
   doesn't depend on seeing colour.
 

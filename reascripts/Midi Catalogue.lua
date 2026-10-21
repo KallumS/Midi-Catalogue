@@ -14,7 +14,7 @@
  *                 Needs ReaImGui, from the ReaTeam Extensions repository.
  * Author:         Kallum Shah
  * Links:          https://github.com/KallumS/Midi-Catalogue
- * Version:        1.2
+ * Version:        1.3
  * Provides:
  *   mc_theory.lua
  *   mc_orchestra.lua
@@ -63,16 +63,28 @@ Place.setMidi(Midi)
 
 local THEME = {
   { "Col_Text",              0xDDE1E7FF },
-  { "Col_TextDisabled",      0x8A919CFF },
+  -- ImGui writes a menu item's keys (Cmd+=) in this colour, so it is a word
+  -- and 7:1 on the menu too (#8A919C was 4.2:1 there). A disabled item is
+  -- drawn faded on top of this, which Apple exempts.
+  { "Col_TextDisabled",      0xBFC5CEFF },
   { "Col_WindowBg",          0x23272EFF },   -- the chrome: dark grey, cool
-  { "Col_PopupBg",           0x1B1F25FF },
-  { "Col_Border",            0x14171CFF },
+  -- Menus and tooltips sit in front of the window, so they are a step
+  -- lighter than it, as Apple's Dark Mode asks of raised surfaces, with an
+  -- edge from the ramp (16 October 2026).
+  { "Col_PopupBg",           0x2A2F37FF },
+  { "Col_Border",            0x3A404AFF },
   { "Col_FrameBg",           0x1A1D23FF },
   { "Col_FrameBgHovered",    0x22262DFF },
   { "Col_FrameBgActive",     0x2A2F37FF },
   { "Col_TitleBg",           0x1B1F25FF },
   { "Col_TitleBgActive",     0x23272EFF },
   { "Col_TitleBgCollapsed",  0x1B1F25FF },
+  { "Col_MenuBarBg",         0x1B1F25FF },
+  -- A menu item under the pointer, and pressed: lighter, then darker, as a
+  -- button is. ImGui's own were a blue the words were 3:1 on.
+  { "Col_Header",            0x3A404AFF },
+  { "Col_HeaderHovered",     0x3A404AFF },
+  { "Col_HeaderActive",      0x22262DFF },
   { "Col_Button",            0xA9AFBAFF },   -- the controls: light grey, raised
   { "Col_ButtonHovered",     0xC0C6CFFF },
   { "Col_ButtonActive",      0x8F96A2FF },
@@ -81,9 +93,13 @@ local THEME = {
   { "Col_SliderGrabActive",  0xFFF200FF },
   { "Col_Separator",         0x3A404AFF },
   { "Col_ScrollbarBg",       0x1A1D23FF },
-  { "Col_ScrollbarGrab",     0x585F6BFF },
-  { "Col_ScrollbarGrabHovered", 0x6D7581FF },
+  -- Marks that can be grabbed are 3:1 on what they sit on (16 October 2026).
+  { "Col_ScrollbarGrab",     0x6D7581FF },
+  { "Col_ScrollbarGrabHovered", 0x8A919CFF },
   { "Col_ScrollbarGrabActive",  0xA9AFBAFF },
+  { "Col_ResizeGrip",        0x6D7581FF },
+  { "Col_ResizeGripHovered", 0x8A919CFF },
+  { "Col_ResizeGripActive",  0xA9AFBAFF },
   -- The keyboard's focus ring: near-white, because yellow means "on" and a
   -- focused control need not be.
   { "Col_NavHighlight",      0xF2F4F7FF },
@@ -102,6 +118,9 @@ local PLAYHEAD  = 0xF2F4F7FF
 -- the house red #D2483F 3.4:1, so neither is used for words any more.
 local DIM       = 0xB0B6C0FF
 local WARN      = 0xFF9E96FF
+-- The edge of a tick box: 4.7:1 on the ground, so the box can be seen at
+-- all (its square is #1A1D23, 1.1:1). The family's frame edge.
+local EDGE      = 0x8A919CFF
 
 -- Shifts a colour towards white or black, so the chosen state needs one colour
 -- rather than three. Arithmetic rather than bit operators, and it keeps the
@@ -157,7 +176,9 @@ local function setTextSize(i)
 end
 
 local function touched() ui.dirty = true end
-local function say(text, warn) ui.status, ui.warn = text, warn or false end
+-- A message, and optionally a way to take back what it reports: Apple asks
+-- that a change that loses something can be undone (16 October 2026).
+local function say(text, warn, undo) ui.status, ui.warn, ui.undo = text, warn or false, undo end
 
 -- Everything that follows from the settings: the context, the catalogue for
 -- the chosen type, which of it the density filter lets through, the entry,
@@ -248,6 +269,18 @@ local function fit(label, width, exact)
   return math.max(exact and width or px(width or 0), select(1, ImGui.CalcTextSize(ctx, text)) + px(16))
 end
 
+-- Puts the next item on this line if `w` more fits before the window's edge,
+-- else starts a new line: a row of fixed things wraps like flow() does, so a
+-- larger text size or a narrower window never pushes one out of sight
+-- (16 October 2026; before, they ran off the right-hand edge at 200%).
+local function beside(w, gap)
+  ImGui.SameLine(ctx, 0, px(gap or 12))
+  if select(1, ImGui.GetContentRegionAvail(ctx)) < w then ImGui.NewLine(ctx) end
+end
+local function textWidth(text) return (select(1, ImGui.CalcTextSize(ctx, text))) end
+-- A tick box's width: the box, the gap, the words.
+local function checkWidth(label) return px(28) + px(8) + textWidth(label) end
+
 -- An unchosen button wears the theme's grey, a chosen one the accent. Either
 -- way the text on it goes to INK: both are far lighter than the chrome.
 local function pick(label, selected, width, exact)
@@ -285,13 +318,53 @@ end
 local STEP_GAP = 22
 local function stepGap() ImGui.Dummy(ctx, px(16), px(STEP_GAP)) end
 
-local function tip(text)
-  if text and ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, text) end
+-- A tooltip, broken into lines of about TIP_CHARS characters: a long one
+-- on a single line ran off the screen at 200%, and Apple's Layout page asks
+-- for a readable line length. A line already short enough is left alone.
+local TIP_CHARS = 64
+local function lines(text)
+  local out = {}
+  for para in (text .. "\n"):gmatch("(.-)\n") do
+    if (utf8.len(para) or #para) <= TIP_CHARS then
+      out[#out + 1] = para
+    else
+      local line = ""
+      for word in para:gmatch("%S+") do
+        local longer = (line == "") and word or (line .. " " .. word)
+        if line ~= "" and (utf8.len(longer) or #longer) > TIP_CHARS then
+          out[#out + 1] = line
+          line = word
+        else
+          line = longer
+        end
+      end
+      out[#out + 1] = line
+    end
+  end
+  return table.concat(out, "\n")
 end
 
+-- Shown on hover, and on keyboard focus too: ImGui counts the focused item
+-- as hovered while the keyboard is in use.
+local function tip(text)
+  if text and ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, lines(text)) end
+end
+
+-- A tick box with an edge 3:1 on the ground. Its square is the frame colour,
+-- nearly the ground's own, so without one only the tick could be seen.
+local function check(label, value)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_FrameBorderSize, math.max(1, px(1)))
+  ImGui.PushStyleColor(ctx, ImGui.Col_Border, EDGE)
+  local changed, v = ImGui.Checkbox(ctx, label, value)
+  ImGui.PopStyleColor(ctx, 1)
+  ImGui.PopStyleVar(ctx, 1)
+  return changed, v
+end
+
+-- Secondary text, wrapped at the window's edge rather than cut off by it.
 local function dim(text)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM)
-  ImGui.Text(ctx, text)
+  ImGui.TextWrapped(ctx, text)
   ImGui.PopStyleColor(ctx, 1)
 end
 
@@ -394,6 +467,7 @@ end
 
 local function setChain(list)
   st.chain = T.chainString(list)
+  ui.undo = nil      -- an older Undo would throw this change away too
   touched()
 end
 
@@ -439,13 +513,19 @@ local function drawChordEditor(key, list)
   end
 
   dim("Start Again From")
-  ImGui.SameLine(ctx)
+  beside(px(60))
   local progs = T.progressionsFor(key)
   local p = flow("prog", progs, function() return false end,
                  function(x) return T.progressionName(key, x) end,
                  function() return "Replace the chords above with this progression, as triads" end, 60)
-  if p then setChain(T.presetChain(progs[p])); ui.edit = nil end
-  ImGui.SameLine(ctx, 0, px(16))
+  if p then
+    local was = st.chain
+    setChain(T.presetChain(progs[p]))
+    ui.edit = nil
+    say("Replaced the chords with " .. T.progressionName(key, progs[p]), false,
+        function() st.chain = was; touched() end)
+  end
+  beside(fit("Done", 60), 16)
   if pick("Done", false, 60) then ui.edit = nil end
 end
 
@@ -468,7 +548,7 @@ local function drawChords()
     if ui.edit == c then ui.edit = nil else ui.edit, ui.chordFam = c, nil end
   end
   if #list < T.MAX_CHAIN then
-    ImGui.SameLine(ctx)
+    beside(fit("+", 28))
     if pick("+", false, 28) then
       local copy = list[ui.edit or #list]
       list[#list + 1] = { degree = copy.degree, fam = copy.fam, name = copy.name }
@@ -478,15 +558,18 @@ local function drawChords()
     tip("Add a chord at the end")
   end
   if #list > 1 then
-    ImGui.SameLine(ctx)
+    beside(fit("−", 28))
     if pick("−", false, 28) then
-      table.remove(list, ui.edit or #list)
+      local was, at = st.chain, ui.edit or #list
+      local gone = T.linkSpelling(key, list[at])
+      table.remove(list, at)
       setChain(list)
       ui.edit = nil
+      say(("Removed chord %d, %s"):format(at, gone), false, function() st.chain = was; touched() end)
     end
     tip(ui.edit and ("Remove chord " .. ui.edit) or "Remove the last chord")
   end
-  ImGui.SameLine(ctx, 0, px(24))
+  beside(textWidth("Bars") + px(12 + 36), 24)
   dim("Bars")
   ImGui.SameLine(ctx)
   local b = flow("bars", C.LENGTHS, function(x) return x == st.bars end, nil,
@@ -513,7 +596,7 @@ local function drawInstrument()
   local f = flow("instfam", fams, function(x) return x == ui.instFam end,
                  function(x) return (x:gsub(" & ", " and ")) end, nil, 84)
   if f then ui.instFam = fams[f] end
-  ImGui.SameLine(ctx, 0, px(24))
+  beside(textWidth("Register") + px(12 + 60), 24)
   dim("Register")
   ImGui.SameLine(ctx)
   local r = flow("register", O.REGISTERS, function(x) return x == st.register end, nil,
@@ -586,10 +669,12 @@ local function drawCatalogue()
   dim(("%d in the catalogue for the %s%s"):format(#ui.shown,
     (st.section ~= "" and O.ensembleById(st.section).name or O.byId(st.inst).name),
     hiddenCount > 0 and (", " .. hiddenCount .. " left out") or ""))
+  -- Why, on the screen rather than in a tooltip on a line of text, which
+  -- only the mouse could reach (16 October 2026).
   if hiddenCount > 0 then
     local why = {}
     for _, h in ipairs(list.hidden) do why[#why + 1] = h.count .. " " .. h.reason end
-    tip("Left out: " .. table.concat(why, "; ") .. ".")
+    dim("Left out: " .. table.concat(why, "; ") .. ".")
   end
 
   if #ui.shown == 0 then
@@ -623,7 +708,7 @@ local function drawShape()
   local r = flow("repeats", C.REPEATS, function(x) return x == st.repeats end,
                  function(x) return "×" .. x end, nil, 40)
   if r then st.repeats = C.REPEATS[r]; touched() end
-  ImGui.SameLine(ctx, 0, px(24))
+  beside(textWidth("Velocity") + px(12 + 80), 24)
   dim("Velocity")
   ImGui.SameLine(ctx)
   local v = flow("velocity", C.VELOCITIES, function(x) return x == st.velocity end, nil,
@@ -648,7 +733,7 @@ local function drawActions()
     dim(("%d notes  /  %.2f beats  /  %s"):format(#block.notes, block.beats, table.concat(parts, ", ")))
     if block.warning then
       ImGui.PushStyleColor(ctx, ImGui.Col_Text, WARN)
-      ImGui.Text(ctx, block.warning)
+      ImGui.TextWrapped(ctx, block.warning)
       ImGui.PopStyleColor(ctx, 1)
     end
   end
@@ -667,7 +752,7 @@ local function drawActions()
   tip(many and "One new track per instrument, named for it, under the selected track"
            or "On the selected track, at the edit cursor")
 
-  ImGui.SameLine(ctx)
+  beside(fit("Export MIDI File", 130))
   if pick("Export MIDI File", false, 130) then
     local res, path = Place.export(block)
     if res == Place.OK then say("Saved " .. tostring(path))
@@ -677,7 +762,7 @@ local function drawActions()
   tip("Saves a .mid file in the Midi Catalogue folder in REAPER’s resource path" ..
       (many and ", one track per instrument" or ""))
 
-  ImGui.SameLine(ctx, 0, px(16))
+  beside(fit("Audition", 96), 16)
   if pick(Place.previewRunning() and "Stop" or "Audition", Place.previewRunning(), 96) then
     if Place.previewRunning() then Place.previewStop()
     else Place.previewStart(block, Place.tempo()) end
@@ -685,9 +770,10 @@ local function drawActions()
   tip("Plays through the virtual keyboard, so a record-armed, monitored track " ..
       "will sound it. The timing is a preview, not a performance.")
 
-  ImGui.SameLine(ctx)
+  beside(checkWidth("Loop"))
   local _
-  _, ui.loop = ImGui.Checkbox(ctx, "Loop", ui.loop)
+  _, ui.loop = check("Loop", ui.loop)
+  tip("Play it round and round until Stop")
 
 end
 
@@ -711,6 +797,12 @@ local function menuBar()
     end
     ImGui.EndMenu(ctx)
   end
+  -- While anything plays, a Stop in the menu bar, which never scrolls out of
+  -- sight the way the one under the roll can (16 October 2026).
+  if Place.previewRunning() then
+    if pick("Stop##menu", true) then Place.previewStop() end
+    tip("Stop playing")
+  end
   ImGui.EndMenuBar(ctx)
 end
 
@@ -732,9 +824,17 @@ end
 local function drawMessage()
   if ui.status == "" then return end
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, ui.warn and WARN or DIM)
-  ImGui.Text(ctx, ui.status)
+  ImGui.TextWrapped(ctx, ui.status)
   ImGui.PopStyleColor(ctx, 1)
-  ImGui.SameLine(ctx, 0, px(16))
+  if ui.undo then
+    beside(fit("Undo"), 16)
+    if pick("Undo", false) then
+      ui.undo()
+      say("")
+    end
+    tip("Put the chords back as they were")
+  end
+  beside(fit("Dismiss"), 16)
   if pick("Dismiss", false) then say("") end
 end
 
@@ -751,6 +851,11 @@ local function frame()
   drawCatalogue()
   drawShape()
   drawActions()
+  -- Esc lets go of what has it first: a menu that is open, a control the
+  -- keyboard is on, a field being typed in. Read here, in this frame, for the
+  -- next one: by the time Esc arrives, ImGui has already let go.
+  ui.escTaken = ImGui.IsAnyItemFocused(ctx) or ImGui.IsAnyItemActive(ctx) or
+                ImGui.IsPopupOpen(ctx, "", ImGui.PopupFlags_AnyPopupId | ImGui.PopupFlags_AnyPopupLevel)
 end
 
 ------------------------------------------------------------------------------
@@ -759,20 +864,37 @@ end
 
 local sectionID, cmdID
 
+-- The smallest the window may be made, grown with the text. Every row wraps
+-- at the window's edge (beside() and flow()), so nothing falls out of reach.
+local MIN_W, MIN_H = 400, 300
+
+-- The title names what is being worked on, which is all a screen reader can
+-- read of the window. "###" keeps it the same window as the name changes.
+local function title()
+  return TITLE .. (ui.block and (" — " .. ui.block.name) or "") .. "###" .. TITLE
+end
+
 local function loop()
   ImGui.SetNextWindowSize(ctx, 1040, 900, ImGui.Cond_FirstUseEver)
+  ImGui.SetNextWindowSizeConstraints(ctx, px(MIN_W), px(MIN_H), 100000, 100000)
   -- Solid rather than the half-transparent window ReaImGui opens by default.
   ImGui.SetNextWindowBgAlpha(ctx, 1.0)
   pushTheme()
   pushSize()
-  local visible, open = ImGui.Begin(ctx, TITLE, true, ImGui.WindowFlags_MenuBar)
+  local taken = ui.escTaken
+  ui.escTaken = false
+  local visible, open = ImGui.Begin(ctx, title(), true, ImGui.WindowFlags_MenuBar)
   if visible then
     frame()
     ImGui.End(ctx)
   end
   popSize()
   popTheme()   -- outside the visible test: a push always needs its pop
-  if open and not ImGui.IsKeyPressed(ctx, ImGui.Key_Escape) then
+  -- Esc: let go of what had it, then close the chord editor, and only then
+  -- the window.
+  local esc = ImGui.IsKeyPressed(ctx, ImGui.Key_Escape) and not taken
+  if esc and ui.edit then ui.edit, esc = nil, false end
+  if open and not esc then
     reaper.defer(loop)
   end
 end
