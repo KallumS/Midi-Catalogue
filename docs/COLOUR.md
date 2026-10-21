@@ -31,27 +31,31 @@ Eighteen greys, darkest to lightest.
 | | R | G | B | used for |
 | --- | ---: | ---: | ---: | --- |
 | `#111419` | 17 | 20 | 25 | piano-roll ground |
-| `#14171C` | 20 | 23 | 28 | borders, and the text on every button |
+| `#14171C` | 20 | 23 | 28 | the text on every button |
 | `#1A1D23` | 26 | 29 | 35 | sunken frames, scrollbar track |
-| `#1B1F25` | 27 | 31 | 37 | popups, title bar |
+| `#1B1F25` | 27 | 31 | 37 | title bar, menu bar |
 | `#1E2228` | 30 | 34 | 40 | roll beat lines |
-| `#22262D` | 34 | 38 | 45 | frame hover |
+| `#22262D` | 34 | 38 | 45 | frame hover, a menu item pressed |
 | `#23272E` | 35 | 39 | 46 | the window chrome, active title |
-| `#2A2F37` | 42 | 47 | 55 | frame active |
-| `#3A404A` | 58 | 64 | 74 | separators, roll bar lines |
-| `#585F6B` | 88 | 95 | 107 | scrollbar grab |
-| `#6D7581` | 109 | 117 | 129 | scrollbar hover |
-| `#8A919C` | 138 | 145 | 156 | disabled and dim text |
+| `#2A2F37` | 42 | 47 | 55 | menus and tooltips (a step lighter than the window, 16 October 2026), frame active |
+| `#3A404A` | 58 | 64 | 74 | separators, roll bar lines, the edge of a menu, a menu item under the pointer |
+| `#585F6B` | 88 | 95 | 107 | (no longer used: 2.6:1 as a scrollbar thumb) |
+| `#6D7581` | 109 | 117 | 129 | scrollbar thumb and resize corner (3.6:1 on the track, 3.3:1 on the ground) |
+| `#8A919C` | 138 | 145 | 156 | the edge of a tick box (4.7:1), scrollbar thumb hovered; never words |
 | `#8F96A2` | 143 | 150 | 162 | button held |
 | `#A9AFBA` | 169 | 175 | 186 | buttons, slider grabs |
-| `#BFC5CE` | 191 | 197 | 206 | the step numbers |
+| `#B0B6C0` | 176 | 182 | 192 | secondary text: hints, labels, the status line (7.4:1) |
+| `#BFC5CE` | 191 | 197 | 206 | the step numbers; a menu item's keys (Cmd+=), 7.2:1 on the menu |
 | `#C0C6CF` | 192 | 198 | 207 | button hover |
 | `#DDE1E7` | 221 | 225 | 231 | body text |
-| `#F2F4F7` | 242 | 244 | 247 | the audition playhead |
+| `#F2F4F7` | 242 | 244 | 247 | the audition playhead, the keyboard's focus ring |
 
 ## One colour off the ramp
 
-`#D2483F` - red, for warnings in the status line. Deliberately not a shade of
+`#D2483F` - red, for warnings in the status line. **It
+marks; it does not letter.** At 3.4:1 on the ground it is too faint for
+words, so a warning's text is `#FF9E96` (7.6:1), the same red lightened, and
+`#D2483F` is kept for marks that are not text. Deliberately not a shade of
 the accent, so a warning can never read as a selection. It and the yellow are
 the only saturated colours in the scheme.
 
@@ -113,9 +117,11 @@ text colour; this one inverts that, so the habit is wrong here.
   --rule:          #3A404A;
   --ink:           #14171C;
   --text:          #DDE1E7;
-  --text-dim:      #8A919C;
+  --text-dim:      #B0B6C0;
+  --text-disabled: #8A919C;
   --roll:          #111419;
   --warn:          #D2483F;
+  --warn-text:     #FF9E96;
 }
 ```
 
@@ -132,6 +138,7 @@ rather than only the same scheme:
 | `Col_FrameBg` | `#1A1D23` |
 | `Col_FrameBgActive` | `#2A2F37` |
 | `Col_FrameBgHovered` | `#22262D` |
+| `Col_NavHighlight` | `#F2F4F7` |
 | `Col_PopupBg` | `#1B1F25` |
 | `Col_ScrollbarBg` | `#1A1D23` |
 | `Col_ScrollbarGrab` | `#585F6B` |
@@ -146,3 +153,26 @@ rather than only the same scheme:
 | `Col_TitleBgActive` | `#23272E` |
 | `Col_TitleBgCollapsed` | `#1B1F25` |
 | `Col_WindowBg` | `#23272E` |
+
+## Contrast, after Apple's guidelines
+
+Apple's Dark Mode page asks for 7:1 between small custom text and its ground
+(4.5:1 at the least). On `#23272E`: body text `#DDE1E7` 11.4:1, secondary
+`#B0B6C0` 7.4:1, step numbers `#BFC5CE` 8.6:1, warnings `#FF9E96` 7.6:1, and
+the ink `#14171C` 8.2:1 on a grey button and 15.4:1 on the yellow. The old
+dim `#8A919C` (4.7:1) and the house red (3.4:1) are kept for disabled text
+and for marks, never for words that must be read. The keyboard's focus ring is
+`#F2F4F7`, not the accent: yellow means *on*, and a focused control need not
+be.
+
+## The final HIG sweep (16 October 2026)
+
+Measured, every value from the ramp, none new:
+
+| what | was | now | contrast |
+| --- | --- | --- | --- |
+| Menus and tooltips | `#1B1F25`, darker than the window | `#2A2F37`, edge `#3A404A` | words 10:1 |
+| Menu bar, highlighted menu item | ImGui's neutral grey and blue (words 3:1) | `#1B1F25`, `#3A404A`, pressed `#22262D` | words 7:1 or more |
+| A menu item's keys | `#8A919C`, 4.2:1 on the menu | `#BFC5CE` | 7.2:1 |
+| Scrollbar thumb, resize corner | `#585F6B` (2.6:1), ImGui's blue | `#6D7581` | 3.6:1 on the track |
+| Loop's tick box | no edge (`#1A1D23` on the ground, 1.1:1) | a 1-point `#8A919C` edge | 4.7:1 |

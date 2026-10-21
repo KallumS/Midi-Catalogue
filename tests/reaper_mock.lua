@@ -209,6 +209,8 @@ local api = {
   -- Settings
   GetExtState = function(s, k) return P.ext[s .. ":" .. k] or "" end,
   SetExtState = function(s, k, v, persist) P.ext[s .. ":" .. k] = v end,
+  -- string GetOS(): "Win32", "Win64", "OSX32", "OSX64", "macOS-arm64", or "Other"
+  GetOS = function() return P.os or "macOS-arm64" end,
 }
 
 function P.install()
