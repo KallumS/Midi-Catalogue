@@ -200,7 +200,7 @@ end
 local O = dofile(C.SCRIPTS .. "mc_orchestra.lua")
 local function instrument(name)
   for _, inst in ipairs(O.INSTRUMENTS) do
-    if inst.name == name then click(inst.family); click(name); return end
+    if inst.name == name then click((inst.family:gsub(" & ", " and "))); click(name); return end
   end
   for _, e in ipairs(O.ENSEMBLES) do
     -- "Strings" is a family and a section; the section is the later button.
@@ -228,7 +228,7 @@ ok(#g.buttons > 50, "the first frame draws its buttons")
 ok(#g.rects > 1, "and the roll, with notes in it")
 eq(g.bgAlpha, 1.0, "the window is solid")
 eq(g.windowBg, 0x23272EFF, "on the house ground")
-for _, step in ipairs({ "Scale", "Chords", "Instrument", "Catalogue", "Shape it" }) do
+for _, step in ipairs({ "Scale", "Chords", "Instrument", "Catalogue", "Shape It" }) do
   ok(has(g.headings, step), "the " .. step .. " step is on screen")
 end
 ok(has(g.texts, "C  D  E  F  G  A  B"), "the scale's notes are spelled out under it")
@@ -291,7 +291,7 @@ for _, cat in ipairs(Ccat.CATEGORIES) do
     instrument(inst)
     click(cat.name)
     for _, ty in ipairs(cat.types) do
-      local good, err = pcall(click, ty)
+      local good, err = pcall(click, Ccat.label(ty))
       if not good then typeFailures[#typeFailures + 1] = inst .. "/" .. ty .. ": " .. tostring(err) end
       allInked(inst .. " " .. ty)
     end
@@ -317,8 +317,8 @@ eq(count("Rhythm"), 0, "a section offers no rhythm category")
 eq(count("Melody"), 0, "or melody")
 eq(count("Harmony"), 1, "only harmony")
 ok(has(g.texts, "Violin I, Violin II, Viola, Cello, Double Bass"), "the block lists its five parts")
-ok(count("Insert on new tracks") == 1, "and inserts on new tracks")
-click("Insert on new tracks")
+ok(count("Insert on New Tracks") == 1, "and inserts on new tracks")
+click("Insert on New Tracks")
 eq(#P.tracks, 6, "which it does: five new tracks under the selected one")
 eq(P.tracks[2].name, "Violin I", "named for their instruments, first violins first")
 eq(P.tracks[6].name, "Double Bass", "double basses last")
@@ -330,7 +330,7 @@ eq(count("Rhythm"), 1, "an instrument brings rhythm back")
 
 -- Insert puts one item on the selected track.
 fresh()
-click("Insert at cursor")
+click("Insert at Cursor")
 eq(#P.tracks[1].items, 1, "Insert at cursor makes one item")
 local notes = P.tracks[1].items[1].take.notes
 ok(#notes > 0, "with notes in it")
@@ -340,7 +340,7 @@ ok(allHundred, "every one at velocity 100")
 
 -- Accents are the only thing that moves a velocity off 100.
 click("Accents")
-click("Insert at cursor")
+click("Insert at Cursor")
 local sawAccent = false
 for _, n in ipairs(P.tracks[1].items[2].take.notes) do
   ok(n.vel == 100 or n.vel == 115, "an accented block is 100 and 115 only")
@@ -349,8 +349,8 @@ end
 ok(sawAccent, "and does accent something")
 
 -- Export writes a file.
-click("Export .mid")
-ok(has(g.texts, "Wrote "), "Export .mid writes a file")
+click("Export MIDI File")
+ok(has(g.texts, "Saved "), "Export MIDI File writes a file")
 
 -- Audition sends notes and stops them.
 click("Audition")
@@ -369,7 +369,7 @@ ok(ons > 0 and offs >= 1, "on and off")
 ------------------------------------------------------------------------------
 
 fresh()
-for _, fam in ipairs({ "Strings", "Woodwind", "Brass", "Percussion", "Keys & Harp", "Sections" }) do
+for _, fam in ipairs({ "Strings", "Woodwind", "Brass", "Percussion", "Keys and Harp", "Sections" }) do
   eq(count(fam), 1, "a button for the " .. fam .. " family")
 end
 eq(count("Piano"), 1, "the chosen instrument's family is showing")
@@ -390,7 +390,7 @@ eq(count("Done"), 0, "the chord editor starts closed")
 eq(count("Sus & Add"), 0, "so no chord families on screen")
 click("V")
 eq(count("Done"), 1, "clicking a chord opens the editor")
-ok(has(g.texts, "Chord 2:  G   -   G B D"), "on that chord, spelled")
+ok(has(g.texts, "Chord 2:  G — G B D"), "on that chord, spelled")
 click("6ths & 7ths")
 click("7")
 ok(has(g.headings, "I-V7-vi-IV"), "choosing 7 makes it V7, in the block's name")
@@ -406,13 +406,13 @@ eq(count("Done"), 0, "Done closes the editor")
 click("+")
 ok(has(g.headings, "I-II7-vi-IV-IV "), "+ adds a copy of the last chord")
 eq(count("Done"), 1, "and opens it")
-click("-")
+click("−")
 ok(has(g.headings, "I-II7-vi-IV "), "- takes it away again")
 -- Chords can be added up to eight.
 for _ = 1, 10 do frame(); if buttonIndex("+") then click("+") end end
 eq(count("+"), 0, "no + past eight chords")
 -- And taken away down to one.
-for _ = 1, 10 do frame(); if buttonIndex("-") then click("-") end end
+for _ = 1, 10 do frame(); if buttonIndex("−") then click("−") end end
 eq(count("-"), 0, "no - for the last chord")
 ok(count("I") >= 1, "one chord left")
 frame()

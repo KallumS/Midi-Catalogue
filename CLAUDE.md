@@ -183,6 +183,18 @@ Labels repeat across rows (a degree button and a chain button can both read
 "IV"; "Strings" is a family and a section), so `test_ui` reads the chain from
 the block's name and picks a section as the later of two buttons.
 
+## Words on screen
+
+The window's text follows Apple's writing guidelines
+([0011](docs/decisions/0011-the-window-follows-apples-writing-guidelines.md),
+after Noterator's 0053): title-style buttons and headings with a verb first
+where they act, sentence-case tooltips and status lines (full stop on a
+sentence, none on a fragment), a failure saying what to do, em and en dashes,
+curly quotes. **A saved value is never renamed; its label is** -
+`C.label(v)` in `mc_catalogue.lua` (`C.LABELS`) is what the window shows for
+a type or a transformation. Reasons for leaving an entry out read after their
+count ("3 outside the Tuba’s range").
+
 ## Colour
 
 The house scheme, unchanged: see `docs/COLOUR.md` (kept by hand). Every grey
@@ -246,9 +258,8 @@ Lua: `apt-get install -y lua5.4` (or `tools/run_lua.py` runs through lupa).
 
 ## Where it stands
 
-Version 1.1 (`index.xml`). Everything is on the branch
-`claude/midi-catalogue-plugin-054jz8`; nothing is merged into `main` yet, so
-the ReaPack link in the README does not resolve until it is. Version 1.0 was
+Version 1.1.1 (`index.xml`), on the branch `claude/adoring-feynman-bihxp2`;
+1.1 is on `main`. Version 1.0 was
 tried in REAPER by the user ("GUI works well but is very busy"); 1.1's window
 (chord chain, instrument families) has only been run against the mocks. The
 latest session log says what is open.
