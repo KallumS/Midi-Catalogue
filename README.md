@@ -77,6 +77,8 @@ showing you nothing: the timpani are tuned to the tonic and the dominant, so
 they play rhythms but not melodies; a glockenspiel has two mallets, so it plays
 no four-note chords.
 
+**In Ableton Live:** `ableton/` has Midi Catalogue as a Max for Live MIDI effect. See [`ableton/README.md`](ableton/README.md).
+
 ## Installing
 
 **1. Install ReaImGui.** The script will not start without it.

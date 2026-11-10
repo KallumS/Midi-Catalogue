@@ -1,0 +1,31 @@
+{
+  "name": "Midi Catalogue",
+  "slug": "MidiCatalogue",
+  "kind": "midi",
+  "template": "midi_effect",
+  "width": 860,
+  "device": {
+    "generator": "midi-catalogue",
+    "instrument": true
+  },
+  "files": {
+    "midi-catalogue/mc_theory.lua": "../reascripts/mc_theory.lua",
+    "midi-catalogue/mc_orchestra.lua": "../reascripts/mc_orchestra.lua",
+    "midi-catalogue/mc_catalogue.lua": "../reascripts/mc_catalogue.lua",
+    "adapters/common.lua": "adapters/common.lua",
+    "adapters/midi_catalogue.lua": "adapters/midi_catalogue.lua",
+    "adapters/index.lua": {
+      "text": "return { \"adapters/midi_catalogue.lua\" }\n"
+    }
+  },
+  "scripts": [
+    "kit/runtime/polyfill.js",
+    "kit/runtime/lua_parse.js",
+    "kit/runtime/lua_runtime.js",
+    "kit/runtime/lua_compile.js",
+    "kit/runtime/host.js",
+    "kit/ui.js",
+    "kit/live.js",
+    "kit/generator.js"
+  ]
+}
