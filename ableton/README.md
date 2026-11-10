@@ -16,6 +16,8 @@ the add-on): the device runs on Max 9's JavaScript engine (`[v8ui]`).
 
 ## Using it
 
+![Midi Catalogue in Live, drawn by the device's own code on a stand-in for Max](window.png)
+
 | | |
 | --- | --- |
 | **Key, Scale** | The key it writes in. **Follow Live** keeps it on Live's scale (the Scale button in the clip view) when that scale is one ScaleView knows. |
@@ -34,7 +36,7 @@ The settings and the key are saved with the Live set.
 ableton/device.json` writes the `.amxd`, the `.maxpat` and the script bundle
 `MidiCatalogue.js`. The bundle is Middaw's Lua 5.4 runtime, the engine, the Noterator adapter (`ableton/adapters/`) and the shared window (`ableton/kit/generator.js`). See `ableton/kit/VENDORED.md`.
 
-`node --test ableton/tests/test_device.js` runs the device on a pretend Max and a pretend Live set: every setting stepped through, hearing a result (every note started is stopped), each way of inserting, a full track refused, following Live's scale, and saving and restoring with the set. Its own tests check the music stays inside each instrument's range, the instrument is saved, and a section's parts each go on their own track.
+`node --test ableton/tests/test_device.js` runs the device on a pretend Max and a pretend Live set: every setting stepped through, hearing a result (every note started is stopped), each way of inserting, a full track refused, following Live's scale, and saving and restoring with the set. Its own tests check the music stays inside each instrument's range, the instrument is saved, and a section's parts each go on their own track. `node ableton/window.js` redraws the picture above from the device's own drawing code (it needs Playwright's Chromium).
 
 ## Limits
 

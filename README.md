@@ -79,6 +79,8 @@ no four-note chords.
 
 **In Ableton Live:** `ableton/` has Midi Catalogue as a Max for Live MIDI effect. See [`ableton/README.md`](ableton/README.md).
 
+![Midi Catalogue in Ableton Live](ableton/window.png)
+
 ## Installing
 
 **1. Install ReaImGui.** The script will not start without it.
