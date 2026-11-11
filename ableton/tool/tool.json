@@ -1,0 +1,34 @@
+{
+  "name": "Midi Catalogue",
+  "slug": "MidiCatalogueTool",
+  "kind": "generator",
+  "template": "midi_tool",
+  "description": "Midi Catalogue in Live's Generate panel: a rhythm, a melody or a harmony for an orchestral instrument, in the clip's scale.",
+  "device": {
+    "generator": "midi-catalogue",
+    "instrument": true,
+    "tool": "generate",
+    "result": "Entry"
+  },
+  "files": {
+    "midi-catalogue/mc_theory.lua": "../../reascripts/mc_theory.lua",
+    "midi-catalogue/mc_orchestra.lua": "../../reascripts/mc_orchestra.lua",
+    "midi-catalogue/mc_catalogue.lua": "../../reascripts/mc_catalogue.lua",
+    "adapters/common.lua": "../adapters/common.lua",
+    "adapters/midi_catalogue.lua": "../adapters/midi_catalogue.lua",
+    "adapters/index.lua": {
+      "text": "return { \"adapters/midi_catalogue.lua\" }\n"
+    }
+  },
+  "scripts": [
+    "../kit/palette.js",
+    "../kit/runtime/polyfill.js",
+    "../kit/runtime/lua_parse.js",
+    "../kit/runtime/lua_runtime.js",
+    "../kit/runtime/lua_compile.js",
+    "../kit/runtime/host.js",
+    "../kit/ui.js",
+    "../kit/live.js",
+    "../kit/miditool.js"
+  ]
+}

@@ -2,6 +2,8 @@
 
 A Max for Live MIDI effect. The catalogue comes from `reascripts/mc_catalogue.lua`, `mc_orchestra.lua` and `mc_theory.lua`, the same files the REAPER script runs, unchanged.
 
+**Its colours are Live's**, after Ableton Live 8's default theme: neutral greys and one amber for what is on, so it sits beside Live's own devices. The REAPER version keeps the house scheme's yellow.
+
 ## Installing
 
 Needs **Live 12.1 or later with Max for Live** (Live Suite, or Standard with
@@ -30,6 +32,26 @@ the add-on): the device runs on Max 9's JavaScript engine (`[v8ui]`).
 
 The settings and the key are saved with the Live set.
 
+## In the clip view's Generate panel
+
+![Midi Catalogue in Live's Generate panel, on a clip in E flat minor](tool/window.png)
+
+`ableton/tool/` has Midi Catalogue as a **MIDI Tool** too: Live 12 lists it under **Generate** in a MIDI clip's view, beside Live's own. It needs Live 12.1 or later with Max for Live, as the device does.
+
+1. Copy `Midi Catalogue.amxd` and `MidiCatalogueTool.js` from `ableton/tool/` into one folder of your User Library, for example `User Library/MIDI Tools/Max Generators/`, keeping the `.js` beside the `.amxd`.
+2. Open a MIDI clip, open **Generate** in the clip view, and choose Midi Catalogue.
+3. Select the time to fill, set the panel, and click **Generate**.
+
+| | |
+| --- | --- |
+| **Entry** | One entry of the catalogue for the instrument and settings below. |
+| The rest | The engine's settings, as on the device, six to a page: click the right of a line for the next value, the left for the one before, or drag up and down. **‹** and **›** turn the page. A change writes again at once while Live's **Auto** is on; otherwise click **Generate** again. |
+| **Key**, **Scale** | Shown only when the clip has no scale. With Live's Scale on, the tool writes in the clip's key. |
+
+The entry fills the time selection, repeated if it is shorter, and stops at its end; with no time selection it writes four bars. Live adds a generator’s notes to what is already in the clip, so clear the selection first to replace it.
+
+`python3 ableton/kit/build.py ableton/tool/tool.json` builds it from the same engine, adapter and kit as the device (`ableton/kit/miditool.js`), and `node --test ableton/tests/test_tool.js` runs it on a pretend Max: the file is a MIDI Tool of its kind, wired from `live.miditool.in` to `live.miditool.out`; what it writes stays inside the time selection, in the clip’s scale; the same apply gives the same notes; a changed setting asks Live to apply again; the settings are kept with the set. `node ableton/tool/window.js` redraws its picture.
+
 ## How it is built
 
 `ableton/device.json` describes the device; `python3 ableton/kit/build.py
@@ -40,6 +62,7 @@ ableton/device.json` writes the `.amxd`, the `.maxpat` and the script bundle
 
 ## Limits
 
+- The MIDI Tool has not been opened in Live either. Its file type is the one Ableton's own `maxdevtools` names; how Live hands it the notes and the context (`live.miditool.in`) comes from a working open-source tool, not from Cycling '74's reference, which could not be reached from where this was built.
 - **It has not been opened in Live yet.** It is tested in Node against a stand-in for Max and the Live Object Model; nothing has run in Max. If the `.amxd` will not open, open `MidiCatalogue.maxpat` in Max and save it as a device.
 - Results are heard on whatever instrument is after the device, a few milliseconds late at worst: Max's JavaScript runs off the audio thread.
 - Parts put on new tracks have no instrument yet: a device cannot load one.
